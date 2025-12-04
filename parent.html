@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Bố Mẹ 📊</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2em;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tab-btn {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+
+        .tab-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+
+        .stat-card .icon {
+            font-size: 2em;
+            float: right;
+            opacity: 0.5;
+        }
+
+        .alert-card {
+            background: #ff5252;
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .alert-card .icon {
+            font-size: 2.5em;
+        }
+
+        .alert-card.warning {
+            background: #ff9800;
+        }
+
+        .alert-card.info {
+            background: #2196f3;
+        }
+
+        .session-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .session-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .session-item.exam-mode {
+            border-left-color: #ff9800;
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .session-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .session-mode {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .session-mode.exam {
+            background: #ff9800;
+        }
+
+        .session-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .detail-item {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .detail-item strong {
+            color: #333;
+        }
+
+        .reward-badge {
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 300px;
+            padding: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 60px;
+            border-radius: 10px 10px 0 0;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .bar:hover {
+            opacity: 0.8;
+            transform: scaleY(1.05);
+        }
+
+        .bar-label {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .schedule-editor {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .schedule-day {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .schedule-day h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: scale(1.05);
+        }
+
+        .btn-small {
+            padding: 5px 15px;
+            font-size: 0.9em;
+        }
+
+        .btn-danger {
+            background: #f44336;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .btn-success {
+            background: #4caf50;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.3s;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📊 Dashboard Bố Mẹ</h1>
+                <p style="color: #666; margin-top: 5px;" id="currentDate"></p>
+            </div>
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="switchTab('overview')">Tổng quan</button>
+                <button class="tab-btn" onclick="switchTab('sessions')">Lịch sử</button>
+                <button class="tab-btn" onclick="switchTab('stats')">Thống kê</button>
+                <button class="tab-btn" onclick="switchTab('schedule')">Thời khóa biểu</button>
+                <button class="tab-btn" onclick="switchTab('rewards')">Tiền thưởng</button>
+            </div>
+        </div>
+
+        <!-- TAB 1: TỔNG QUAN -->
+        <div id="tab-overview" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon">📚</div>
+                    <div class="label">Môn đã hoàn thành hôm nay</div>
+                    <div class="value" id="todayCompleted">0/0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">⏱️</div>
+                    <div class="label">Tổng thời gian học hôm nay</div>
+                    <div class="value" id="todayTime">0h 0m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">💰</div>
+                    <div class="label">Tiền thưởng hôm nay</div>
+                    <div class="value" id="todayReward">0đ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">🎯</div>
+                    <div class="label">Tỷ lệ hoàn thành</div>
+                    <div class="value" id="todayCompletion">0%</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚠️ Cảnh báo & Thông báo</h2>
+                <div id="alertsContainer"></div>
+            </div>
+
+            <div class="card">
+                <h2>📝 Hoạt động gần đây</h2>
+                <div id="recentActivities"></div>
+            </div>
+        </div>
+
+        <!-- TAB 2: LỊCH SỬ -->
+        <div id="tab-sessions" class="tab-content">
+            <div class="card">
+                <h2>📖 Lịch sử làm bài</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterSessions('all')">Tất cả</button>
+                    <button class="filter-btn" onclick="filterSessions('today')">Hôm nay</button>
+                    <button class="filter-btn" onclick="filterSessions('week')">Tuần này</button>
+                    <button class="filter-btn" onclick="filterSessions('month')">Tháng này</button>
+                </div>
+                <div class="session-list" id="sessionsList"></div>
+            </div>
+        </div>
+
+        <!-- TAB 3: THỐNG KÊ -->
+        <div id="tab-stats" class="tab-content">
+            <div class="card">
+                <h2>📊 Thời gian học theo ngày (7 ngày gần nhất)</h2>
+                <div class="bar-chart" id="timeChart"></div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Xu hướng tiến bộ</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">Thời gian học trung bình/ngày</div>
+                        <div class="value" id="avgTimePerDay">0h</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Tỷ lệ hoàn thành trung bình</div>
+                        <div class="value" id="avgCompletion">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Số lần gọi bố mẹ (tuần)</div>
+                        <div class="value" id="callParentCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Số lần dùng Chat AI (tuần)</div>
+                        <div class="value" id="chatAICount">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Phân tích chi tiết</h2>
+                <div id="detailedAnalysis"></div>
+            </div>
+        </div>
+
+        <!-- TAB 4: THỜI KHÓA BIỂU -->
+        <div id="tab-schedule" class="tab-content">
+            <div class="card">
+                <h2>📅 Quản lý Thời khóa biểu</h2>
+                <p style="color: #666; margin-bottom: 20px;">Xem và chỉnh sửa lịch học của con</p>
+                <div id="scheduleEditor"></div>
+            </div>
+        </div>
+
+        <!-- TAB 5: TIỀN THƯỞNG -->
+        <div id="tab-rewards" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon">💰</div>
+                    <div class="label">Tổng tiền chưa trả</div>
+                    <div class="value" id="unpaidReward">0đ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">✅</div>
+                    <div class="label">Đã trả tuần này</div>
+                    <div class="value" id="paidThisWeek">0đ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">📊</div>
+                    <div class="label">Tổng tích lũy tháng này</div>
+                    <div class="value" id="totalThisMonth">0đ</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>💸 Lịch sử tiền thưởng</h2>
+                <div id="rewardHistory"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chi tiết session -->
+    <div class="modal" id="sessionModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <div id="sessionDetail"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load data
+        let sessionHistory = [];
+        let activityLogs = [];
+        let completedSubjects = [];
+        let currentFilter = 'all';
+
+        const SCHEDULE = {
+            'Monday': [
+                {time: '16h30-17h15', subject: 'Yên Hòa HW', type: 'homework'},
+                {time: '17h20-19h00', subject: 'Maths cô Hải', type: 'homework'},
+                {time: '19h30-20h00', subject: 'Eat + Shower', type: 'break'},
+                {time: '20h-21h30', subject: 'FCE online', type: 'homework'},
+                {time: '21h30-22h', subject: 'Yên Hòa HW', type: 'homework'}
+            ],
+            'Tuesday': [
+                {time: '16h30-17h30', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework'},
+                {time: '17h30-18h', subject: 'Eat', type: 'break'},
+                {time: '18h-20h', subject: 'Speaking Class (LIME)', type: 'class'},
+                {time: '20h30-21h30', subject: 'Go home + Shower', type: 'break'},
+                {time: '21h30-22h', subject: 'FCE online HW / chữa bài sai', type: 'homework'}
+            ],
+            'Wednesday': [
+                {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework'},
+                {time: '18h-19h', subject: 'Eat + Shower', type: 'break'},
+                {time: '19h-20h30', subject: 'Maths cô Hải HW (2.5h)', type: 'homework'},
+                {time: '20h35-21h35', subject: 'FCE offline HW / chữa bài sai', type: 'homework'},
+                {time: '21h30-22h', subject: 'FCE Speaking HW / extra', type: 'homework'}
+            ],
+            'Thursday': [
+                {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework'},
+                {time: '18h-19h', subject: 'Eat + Shower', type: 'break'},
+                {time: '19h-19h45', subject: 'FCE offline HW / chữa bài sai', type: 'homework'},
+                {time: '20h-21h', subject: 'FCE Online Class', type: 'class'},
+                {time: '21h35-22h', subject: 'FCE offline HW / chữa bài sai', type: 'homework'}
+            ],
+            'Friday': [
+                {time: '16h30-17h30', subject: 'Math HW cô Hải', type: 'homework'},
+                {time: '17h30-18h', subject: 'Eat', type: 'break'},
+                {time: '18h-20h30', subject: 'FCE Offline Class', type: 'class'},
+                {time: '21h30-22h', subject: 'Shower + Free time', type: 'break'}
+            ],
+            'Saturday': [
+                {time: '9h-12h', subject: 'Math HW cô Hải', type: 'homework'},
+                {time: '12h-14h30', subject: 'FCE online HW / chữa bài sai', type: 'homework'},
+                {time: '12h20-14h30', subject: 'Eat + Sleep', type: 'break'},
+                {time: '14h40-15h40', subject: 'FCE online HW / chữa bài sai', type: 'homework'},
+                {time: '15h45-16h45', subject: 'FCE Speaking HW', type: 'homework'},
+                {time: '16h50-19h', subject: 'Kick boxing', type: 'class'},
+                {time: '17h35-18h15', subject: 'Chuẩn bị bài Speaking Club', type: 'homework'},
+                {time: '19h-21h', subject: 'Speech Class', type: 'class'},
+                {time: '21h-22h', subject: 'Shower + Free time', type: 'break'}
+            ],
+            'Sunday': [
+                {time: '9h-10h', subject: 'Ukulele', type: 'homework'},
+                {time: '10h30-11h30', subject: 'Speaking Club', type: 'class'},
+                {time: '12h-13h30', subject: 'Math cô Hải', type: 'homework'},
+                {time: '13h30-15h', subject: 'Eat + Sleep', type: 'break'},
+                {time: '15h-16h', subject: 'FCE HW', type: 'homework'},
+                {time: '16-17h', subject: 'FCE HW', type: 'homework'},
+                {time: '17h05-18h', subject: 'Eat + Shower', type: 'break'},
+                {time: '18h-19h', subject: 'Yên Hòa HW', type: 'homework'},
+                {time: '19h-20h', subject: 'Yên Hòa HW', type: 'homework'},
+                {time: '20h05-21h', subject: 'Chữa bài các môn Toán', type: 'homework'}
+            ]
+        };
+
+        window.onload = function() {
+            loadData();
+            displayCurrentDate();
+            updateOverview();
+            displayRecentActivities();
+            displayAlerts();
+            renderSessions();
+            renderStats();
+            renderSchedule();
+            renderRewards();
+        };
+
+        function loadData() {
+            sessionHistory = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
+            activityLogs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+            completedSubjects = JSON.parse(localStorage.getItem('completedSubjects') || '[]');
+        }
+
+        function displayCurrentDate() {
+            const today = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = today.toLocaleDateString('vi-VN', options);
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function updateOverview() {
+            const today = new Date().toDateString();
+            const todaySessions = sessionHistory.filter(s => new Date(s.date).toDateString() === today);
+            
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = days[new Date().getDay()];
+            const todaySchedule = SCHEDULE[dayName] || [];
+            const homeworkCount = todaySchedule.filter(s => s.type === 'homework').length;
+
+            // Completed subjects today
+            document.getElementById('todayCompleted').textContent = `${completedSubjects.length}/${homeworkCount}`;
+
+            // Total time today
+            const totalSeconds = todaySessions.reduce((sum, s) => sum + (s.time || 0), 0);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            document.getElementById('todayTime').textContent = `${hours}h ${minutes}m`;
+
+            // Total reward today
+            const totalReward = todaySessions.reduce((sum, s) => sum + (s.reward || 0), 0);
+            document.getElementById('todayReward').textContent = `${totalReward.toLocaleString('vi-VN')}đ`;
+
+            // Completion rate
+            const completionRate = homeworkCount > 0 ? ((completedSubjects.length / homeworkCount) * 100).toFixed(0) : 0;
+            document.getElementById('todayCompletion').textContent = `${completionRate}%`;
+        }
+
+        function displayAlerts() {
+            const container = document.getElementById('alertsContainer');
+            const recentLogs = activityLogs.slice(-10).reverse();
+            
+            const alerts = recentLogs.filter(log => 
+                log.type.includes('CẢNH BÁO') || 
+                log.type.includes('Cảnh báo') ||
+                log.type.includes('Gọi')
+            );
+
+            if (alerts.length === 0) {
+                container.innerHTML = '<p style="color: #4caf50;">✅ Không có cảnh báo. Mọi thứ đều ổn!</p>';
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => {
+                const time = new Date(alert.timestamp).toLocaleTimeString('vi-VN');
+                const isWarning = alert.type.includes('CẢNH BÁO');
+                const isCall = alert.type.includes('Gọi');
+                
+                return `
+                    <div class="alert-card ${isWarning ? '' : isCall ? 'info' : 'warning'}">
+                        <div class="icon">${isWarning ? '⚠️' : isCall ? '📞' : 'ℹ️'}</div>
+                        <div>
+                            <strong>${alert.type}</strong><br>
+                            ${alert.detail}<br>
+                            <small>${time}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function displayRecentActivities() {
+            const container = document.getElementById('recentActivities');
+            const recent = activityLogs.slice(-5).reverse();
+
+            if (recent.length === 0) {
+                container.innerHTML = '<p style="color: #999;">Chưa có hoạt động nào.</p>';
+                return;
+            }
+
+            container.innerHTML = recent.map(log => {
+                const time = new Date(log.timestamp).toLocaleTimeString('vi-VN');
+                const date = new Date(log.timestamp).toLocaleDateString('vi-VN');
+                return `
+                    <div style="padding: 15px; background: #f9f9f9; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>${log.type}</strong>: ${log.detail}<br>
+                        <small style="color: #999;">${date} ${time}</small>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSessions() {
+            const container = document.getElementById('sessionsList');
+            let filtered = sessionHistory;
+
+            if (currentFilter === 'today') {
+                const today = new Date().toDateString();
+                filtered = sessionHistory.filter(s => new Date(s.date).toDateString() === today);
+            } else if (currentFilter === 'week') {
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                filtered = sessionHistory.filter(s => new Date(s.date) >= weekAgo);
+            } else if (currentFilter === 'month') {
+                const monthAgo = new Date();
+                monthAgo.setMonth(monthAgo.getMonth() - 1);
+                filtered = sessionHistory.filter(s => new Date(s.date) >= monthAgo);
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Chưa có lịch sử làm bài.</p>';
+                return;
+            }
+
+            container.innerHTML = filtered.reverse().map(session => {
+                const date = new Date(session.date).toLocaleDateString('vi-VN');
+                const time = new Date(session.date).toLocaleTimeString('vi-VN');
+                const duration = formatDuration(session.time || 0);
+                const isExam = session.mode === 'exam';
+                
+                return `
+                    <div class="session-item ${isExam ? 'exam-mode' : ''}" onclick="showSessionDetail('${session.id}')">
+                        <div class="session-header">
+                            <div class="session-title">${session.subject}</div>
+                            <div class="session-mode ${isExam ? 'exam' : ''}">${isExam ? 'Thi' : 'Luyện tập'}</div>
+                        </div>
+                        <div class="session-details">
+                            <div class="detail-item">
+                                <strong>📅 Ngày:</strong> ${date}
+                            </div>
+                            <div class="detail-item">
+                                <strong>⏰ Giờ:</strong> ${time}
+                            </div>
+                            <div class="detail-item">
+                                <strong>⏱️ Thời gian:</strong> ${duration}
+                            </div>
+                            <div class="detail-item">
+                                <strong>💰 Thưởng:</strong> ${(session.reward || 0).toLocaleString('vi-VN')}đ
+                            </div>
+                            ${session.score !== undefined ? `
+                            <div class="detail-item">
+                                <strong>📊 Điểm:</strong> ${session.score}/${session.total}
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterSessions(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            renderSessions();
+        }
+
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            }
+            return `${minutes}m`;
+        }
+
+        function showSessionDetail(sessionId) {
+            const session = sessionHistory.find(s => s.id === sessionId);
+            if (!session) return;
+
+            const modal = document.getElementById('sessionModal');
+            const detailContainer = document.getElementById('sessionDetail');
+
+            const date = new Date(session.date).toLocaleDateString('vi-VN');
+            const time = new Date(session.date).toLocaleTimeString('vi-VN');
+            const duration = formatDuration(session.time || 0);
+
+            detailContainer.innerHTML = `
+                <h2 style="color: #667eea; margin-bottom: 20px;">${session.subject}</h2>
+                
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">📋 Thông tin chung</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div><strong>Ngày giờ:</strong> ${date} ${time}</div>
+                        <div><strong>Thời gian làm:</strong> ${duration}</div>
+                        <div><strong>Mục tiêu:</strong> ${session.targetTime ? formatDuration(session.targetTime) : 'Không có'}</div>
+                        <div><strong>Tiền thưởng:</strong> ${(session.reward || 0).toLocaleString('vi-VN')}đ</div>
+                    </div>
+                </div>
+
+                ${session.questions && session.questions.length > 0 ? `
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">📝 Chi tiết từng câu</h3>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        ${session.questions.map((q, idx) => `
+                            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${q.completed ? '#4caf50' : '#ff9800'};">
+                                <strong>Câu ${idx + 1}:</strong> ${q.completed ? '✅ Đã hoàn thành' : '⏳ Chưa hoàn thành'}
+                                ${q.timeSpent ? `<br><small>Thời gian: ${formatDuration(q.timeSpent)}</small>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${session.aiChatCount || session.callParentCount ? `
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">🔧 Công cụ hỗ trợ</h3>
+                    ${session.aiChatCount ? `<p>💬 Số lần dùng Chat AI: <strong>${session.aiChatCount}</strong></p>` : ''}
+                    ${session.callParentCount ? `<p>📞 Số lần gọi bố mẹ: <strong>${session.callParentCount}</strong></p>` : ''}
+                </div>
+                ` : ''}
+
+                ${session.feedback ? `
+                <div style="background: #fff3cd; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">💡 Nhận xét & Động viên</h3>
+                    <p>${session.feedback}</p>
+                </div>
+                ` : ''}
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('sessionModal').classList.remove('active');
+        }
+
+        function renderStats() {
+            renderTimeChart();
+            calculateAverages();
+            renderDetailedAnalysis();
+        }
+
+        function renderTimeChart() {
+            const container = document.getElementById('timeChart');
+            const last7Days = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                last7Days.push({
+                    date: date.toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit'}),
+                    dateStr: date.toDateString()
+                });
+            }
+
+            const dailyTime = last7Days.map(day => {
+                const sessions = sessionHistory.filter(s => new Date(s.date).toDateString() === day.dateStr);
+                const totalSeconds = sessions.reduce((sum, s) => sum + (s.time || 0), 0);
+                return {
+                    label: day.date,
+                    value: Math.round(totalSeconds / 3600 * 10) / 10, // hours
+                    height: totalSeconds > 0 ? Math.max((totalSeconds / 3600) * 30, 20) : 0
+                };
+            });
+
+            const maxHeight = Math.max(...dailyTime.map(d => d.height), 100);
+
+            container.innerHTML = dailyTime.map(day => `
+                <div style="text-align: center;">
+                    <div class="bar" style="height: ${(day.height / maxHeight) * 100}%">
+                        <div class="bar-value">${day.value}h</div>
+                    </div>
+                    <div class="bar-label">${day.label}</div>
+                </div>
+            `).join('');
+        }
+
+        function calculateAverages() {
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const weekSessions = sessionHistory.filter(s => new Date(s.date) >= weekAgo);
+
+            // Average time per day
+            const totalSeconds = weekSessions.reduce((sum, s) => sum + (s.time || 0), 0);
+            const avgSecondsPerDay = totalSeconds / 7;
+            const avgHours = Math.round(avgSecondsPerDay / 3600 * 10) / 10;
+            document.getElementById('avgTimePerDay').textContent = `${avgHours}h`;
+
+            // Average completion rate
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            let totalCompletion = 0;
+            let daysCount = 0;
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dayName = days[date.getDay()];
+                const schedule = SCHEDULE[dayName] || [];
+                const homeworkCount = schedule.filter(s => s.type === 'homework').length;
+                
+                if (homeworkCount > 0) {
+                    const daySessions = sessionHistory.filter(s => 
+                        new Date(s.date).toDateString() === date.toDateString()
+                    );
+                    const completed = daySessions.length;
+                    totalCompletion += (completed / homeworkCount) * 100;
+                    daysCount++;
+                }
+            }
+
+            const avgCompletion = daysCount > 0 ? Math.round(totalCompletion / daysCount) : 0;
+            document.getElementById('avgCompletion').textContent = `${avgCompletion}%`;
+
+            // Call parent count
+            const callCount = weekSessions.reduce((sum, s) => sum + (s.callParentCount || 0), 0);
+            document.getElementById('callParentCount').textContent = callCount;
+
+            // Chat AI count
+            const chatCount = weekSessions.reduce((sum, s) => sum + (s.aiChatCount || 0), 0);
+            document.getElementById('chatAICount').textContent = chatCount;
+        }
+
+        function renderDetailedAnalysis() {
+            const container = document.getElementById('detailedAnalysis');
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const weekSessions = sessionHistory.filter(s => new Date(s.date) >= weekAgo);
+
+            // Analyze by subject
+            const subjectStats = {};
+            weekSessions.forEach(session => {
+                if (!subjectStats[session.subject]) {
+                    subjectStats[session.subject] = {
+                        count: 0,
+                        totalTime: 0,
+                        totalReward: 0,
+                        avgScore: 0,
+                        totalScore: 0,
+                        scoreCount: 0
+                    };
+                }
+                subjectStats[session.subject].count++;
+                subjectStats[session.subject].totalTime += session.time || 0;
+                subjectStats[session.subject].totalReward += session.reward || 0;
+                if (session.score !== undefined) {
+                    subjectStats[session.subject].totalScore += (session.score / session.total) * 100;
+                    subjectStats[session.subject].scoreCount++;
+                }
+            });
+
+            // Calculate averages
+            Object.keys(subjectStats).forEach(subject => {
+                const stats = subjectStats[subject];
+                if (stats.scoreCount > 0) {
+                    stats.avgScore = Math.round(stats.totalScore / stats.scoreCount);
+                }
+            });
+
+            container.innerHTML = `
+                <div style="display: grid; gap: 20px;">
+                    ${Object.keys(subjectStats).map(subject => {
+                        const stats = subjectStats[subject];
+                        const avgTime = formatDuration(Math.round(stats.totalTime / stats.count));
+                        return `
+                            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px;">
+                                <h3 style="color: #667eea; margin-bottom: 15px;">${subject}</h3>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                    <div>
+                                        <div style="color: #666; font-size: 0.9em;">Số buổi học</div>
+                                        <div style="font-size: 1.5em; font-weight: bold; color: #333;">${stats.count}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #666; font-size: 0.9em;">Thời gian TB</div>
+                                        <div style="font-size: 1.5em; font-weight: bold; color: #333;">${avgTime}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #666; font-size: 0.9em;">Tổng thưởng</div>
+                                        <div style="font-size: 1.5em; font-weight: bold; color: #333;">${stats.totalReward.toLocaleString('vi-VN')}đ</div>
+                                    </div>
+                                    ${stats.scoreCount > 0 ? `
+                                    <div>
+                                        <div style="color: #666; font-size: 0.9em;">Điểm TB</div>
+                                        <div style="font-size: 1.5em; font-weight: bold; color: #333;">${stats.avgScore}%</div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function renderSchedule() {
+            const container = document.getElementById('scheduleEditor');
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+
+            container.innerHTML = days.map((day, idx) => {
+                const schedule = SCHEDULE[day] || [];
+                return `
+                    <div class="schedule-day">
+                        <h3>${dayNames[idx]}</h3>
+                        ${schedule.map((item, itemIdx) => {
+                            const typeLabel = item.type === 'homework' ? '📝 Bài tập' : 
+                                            item.type === 'class' ? '🏫 Lớp học' : '☕ Nghỉ ngơi';
+                            return `
+                                <div class="schedule-item">
+                                    <div>
+                                        <strong>${item.time}</strong><br>
+                                        ${typeLabel}: ${item.subject}
+                                    </div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button class="btn btn-small" onclick="editScheduleItem('${day}', ${itemIdx})">Sửa</button>
+                                        <button class="btn btn-small btn-danger" onclick="deleteScheduleItem('${day}', ${itemIdx})">Xóa</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                        <button class="btn btn-success" onclick="addScheduleItem('${day}')" style="margin-top: 10px;">+ Thêm môn học</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function editScheduleItem(day, index) {
+            alert('Tính năng chỉnh sửa sẽ được cập nhật trong phiên bản tiếp theo!');
+        }
+
+        function deleteScheduleItem(day, index) {
+            if (confirm('Bạn có chắc muốn xóa môn học này?')) {
+                SCHEDULE[day].splice(index, 1);
+                renderSchedule();
+                alert('Đã xóa!');
+            }
+        }
+
+        function addScheduleItem(day) {
+            alert('Tính năng thêm môn học sẽ được cập nhật trong phiên bản tiếp theo!');
+        }
+
+        function renderRewards() {
+            // Calculate rewards
+            const today = new Date();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            const unpaid = sessionHistory.filter(s => !s.paid).reduce((sum, s) => sum + (s.reward || 0), 0);
+            const paidThisWeek = sessionHistory.filter(s => s.paid && new Date(s.paidDate) >= weekStart)
+                .reduce((sum, s) => sum + (s.reward || 0), 0);
+            const totalThisMonth = sessionHistory.filter(s => new Date(s.date) >= monthStart)
+                .reduce((sum, s) => sum + (s.reward || 0), 0);
+
+            document.getElementById('unpaidReward').textContent = `${unpaid.toLocaleString('vi-VN')}đ`;
+            document.getElementById('paidThisWeek').textContent = `${paidThisWeek.toLocaleString('vi-VN')}đ`;
+            document.getElementById('totalThisMonth').textContent = `${totalThisMonth.toLocaleString('vi-VN')}đ`;
+
+            // Render history
+            const container = document.getElementById('rewardHistory');
+            const rewardSessions = sessionHistory.filter(s => s.reward && s.reward > 0).reverse();
+
+            if (rewardSessions.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Chưa có lịch sử thưởng.</p>';
+                return;
+            }
+
+            container.innerHTML = rewardSessions.map(session => {
+                const date = new Date(session.date).toLocaleDateString('vi-VN');
+                return `
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${session.subject}</strong><br>
+                            <small style="color: #666;">${date}</small>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="reward-badge">${session.reward.toLocaleString('vi-VN')}đ</div>
+                            ${session.paid ? 
+                                '<div style="color: #4caf50; font-size: 0.9em; margin-top: 5px;">✅ Đã trả</div>' : 
+                                '<button class="btn btn-small btn-success" onclick="markAsPaid(\''+session.id+'\')">Đánh dấu đã trả</button>'
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function markAsPaid(sessionId) {
+            const session = sessionHistory.find(s => s.id === sessionId);
+            if (session) {
+                session.paid = true;
+                session.paidDate = new Date().toISOString();
+                localStorage.setItem('sessionHistory', JSON.stringify(sessionHistory));
+                renderRewards();
+                alert('Đã đánh dấu đã trả thưởng!');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('sessionModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học tập hôm nay 📚</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .date-display {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .subject-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .subject-card.completed {
+            opacity: 0.7;
+            background: #f0f0f0;
+        }
+
+        .subject-card.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #4caf50;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+
+        .subject-card.in-progress {
+            border: 3px solid #ff9800;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4); }
+            50% { box-shadow: 0 5px 25px rgba(255, 152, 0, 0.8); }
+        }
+
+        .subject-card.class-type {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        }
+
+        .time-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .subject-name {
+            font-size: 1.5em;
+            color: #333;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .subject-type {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #4caf50;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        /* Mode selection styles */
+        .mode-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .mode-card {
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .mode-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .mode-card .icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .mode-card .title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .mode-card .description {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Exam mode styles */
+        .exam-mode-screen {
+            background: #000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .exam-mode-screen.active {
+            display: flex;
+        }
+
+        .exam-timer {
+            font-size: 8em;
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 30px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .exam-timer.warning {
+            color: #ff9800;
+            animation: blink 1s infinite;
+        }
+
+        .exam-timer.danger {
+            color: #f44336;
+        }
+
+        .exam-subject {
+            font-size: 2em;
+            color: #aaa;
+            margin-bottom: 50px;
+        }
+
+        .exam-finish-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            border-radius: 15px;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.3s;
+display: none;
+        }
+
+        .exam-finish-btn:hover {
+            background: #45a049;
+            transform: scale(1.1);
+        }
+
+        .timer-display {
+            font-size: 3em;
+            text-align: center;
+            color: #667eea;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .timer-display.warning {
+            color: #ff9800;
+            animation: blink 1s infinite;
+        }
+
+        .timer-display.danger {
+            color: #f44336;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.5; }
+        }
+
+        .question-tracker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .question-item {
+            aspect-ratio: 1;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .question-item:hover {
+            transform: scale(1.1);
+        }
+
+        .question-item.completed {
+            background: #4caf50;
+            color: white;
+            border-color: #4caf50;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .chat-popup {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 400px;
+            height: 600px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 2000;
+            flex-direction: column;
+        }
+
+        .chat-popup.active {
+            display: flex;
+        }
+
+        .chat-header {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .prompt-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .copy-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .break-activities {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .activity-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .activity-card:hover {
+            transform: scale(1.05);
+        }
+
+        .activity-card .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .stats-summary {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .reward-display {
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+
+        .encouragement {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-size: 1.1em;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .alert-banner {
+            background: #ff5252;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+            align-items: center;
+            gap: 15px;
+            animation: shake 0.5s;
+        }
+
+        .alert-banner.active {
+            display: flex;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .chat-popup {
+                width: 90%;
+                right: 5%;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+
+            .exam-timer {
+                font-size: 4em;
+            }
+
+            .mode-selection {
+                grid-template-columns: 1fr;
+            }
+.submit-guide {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
+    border-left: 5px solid #ffc107;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.submit-guide h3 {
+    color: #856404;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.submit-guide ol {
+    color: #856404;
+    line-height: 2;
+    margin-left: 20px;
+    font-size: 1em;
+}
+
+.submit-guide ol li {
+    margin: 8px 0;
+    padding-left: 5px;
+}
+
+.submit-guide ol li strong {
+    color: #d9534f;
+}
+
+.submit-warning {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 15px;
+    text-align: center;
+    font-weight: bold;
+    border: 2px solid #f5c6cb;
+}
+
+.timer-warning {
+    animation: pulse-warning 2s infinite;
+}
+
+@keyframes pulse-warning {
+    0%, 100% { 
+        background: #fff3cd;
+        transform: scale(1);
+    }
+    50% { 
+        background: #ffe8a1;
+        transform: scale(1.02);
+    }
+}
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Xin chào! 👋</h1>
+            <div class="date-display" id="dateDisplay"></div>
+        </div>
+
+        <div class="alert-banner" id="alertBanner">
+            <span style="font-size: 2em;">⚠️</span>
+            <span id="alertMessage"></span>
+        </div>
+
+        <div id="scheduleContainer" class="schedule-grid"></div>
+    </div>
+
+    <!-- Modal for Class Type -->
+    <div class="modal" id="classModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('classModal')">&times;</button>
+            <h2 style="color: #667eea; margin-bottom: 20px;">📚 Tiết học tại lớp</h2>
+            <div id="classInfo"></div>
+            <button class="btn btn-success" onclick="markClassComplete()">✓ Đã hoàn thành</button>
+        </div>
+    </div>
+
+    <!-- Modal for Homework Setup -->
+    <div class="modal" id="setupModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('setupModal')">&times;</button>
+            <h2 style="color: #667eea; margin-bottom: 20px;">Chuẩn bị làm bài</h2>
+            <div id="setupForm"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Working (Normal Mode) -->
+    <div class="modal" id="workModal">
+        <div class="modal-content">
+            <h2 style="color: #667eea; margin-bottom: 20px;" id="workTitle"></h2>
+            <div class="timer-display" id="timerDisplay">00:00</div>
+            <div class="question-tracker" id="questionTracker"></div>
+            <div class="action-buttons">
+                <button class="btn" onclick="openChatAI()">💬 Chat AI</button>
+                <button class="btn btn-secondary" onclick="callParent('mẹ')">📞 Gọi mẹ</button>
+                <button class="btn btn-secondary" onclick="callParent('bố')">📞 Gọi bố</button>
+            </div>
+            <button class="btn btn-success" onclick="finishWork()" style="width: 100%; margin-top: 20px;">Hoàn thành</button>
+        </div>
+    </div>
+
+    <!-- Exam Mode Screen -->
+    <div class="exam-mode-screen" id="examModeScreen">
+        <div class="exam-subject" id="examSubject"></div>
+        <div class="exam-timer" id="examTimer">00:00</div>
+        <button class="exam-finish-btn" onclick="finishWork()">Hoàn thành</button>
+    </div>
+
+    <!-- Modal for Results -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeResultModal()">&times;</button>
+            <h2 style="color: #667eea; margin-bottom: 20px;">🎉 Kết quả làm bài</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Break -->
+    <div class="modal" id="breakModal">
+        <div class="modal-content">
+            <h2 style="color: #667eea; margin-bottom: 20px;">☕ Nghỉ giải lao</h2>
+            <div class="timer-display" id="breakTimer">05:00</div>
+            <p style="text-align: center; color: #666; margin-bottom: 20px;">Chọn hoạt động giải trí:</p>
+            <div class="break-activities">
+                <div class="activity-card" onclick="selectActivity('Nhảy theo nhạc')">
+                    <div class="icon">💃</div>
+                    <div>Nhảy theo nhạc</div>
+                </div>
+                <div class="activity-card" onclick="selectActivity('Chạy cầu thang')">
+                    <div class="icon">🏃</div>
+                    <div>Chạy cầu thang</div>
+                </div>
+                <div class="activity-card" onclick="selectActivity('Bôi kem cho bà')">
+                    <div class="icon">🤗</div>
+                    <div>Bôi kem cho bà</div>
+                </div>
+                <div class="activity-card" onclick="selectActivity('Uống nước')">
+                    <div class="icon">💧</div>
+                    <div>Uống nước</div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="skipBreak()" style="width: 100%; margin-top: 20px;">Bỏ qua nghỉ</button>
+        </div>
+    </div>
+
+    <!-- Chat Popup -->
+    <div class="chat-popup" id="chatPopup">
+        <div class="chat-header">
+            <span>💬 Chat với Claude AI</span>
+            <button class="close-btn" onclick="closeChatAI()" style="position: static; color: white;">&times;</button>
+        </div>
+        <div class="chat-body">
+            <p style="margin-bottom: 15px; color: #666;">Sao chép prompt bên dưới và dán vào Claude.ai:</p>
+            <div class="prompt-box" id="promptBox"></div>
+            <button class="copy-btn" onclick="copyPrompt()">📋 Sao chép</button>
+            <button class="btn" onclick="openClaudeAI()" style="width: 100%; margin-top: 15px;">Mở Claude.ai</button>
+        </div>
+    </div>
+
+    <audio id="alarmSound" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuCzvLZizUHGGS56eObTA0PPKXh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0PN6Xh8bllHAU2jdXvx3YpBSh+zPDajzsIFmm98OScTQ0P" preload="auto"></audio>
+
+    <script>
+        // Schedule data
+        const SCHEDULE = {
+            'Monday': [
+                {time: '16h30-17h15', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true},
+                {time: '17h20-19h00', subject: 'Maths cô Hải', type: 'homework', requireSubmit: true},
+                {time: '19h30-20h00', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
+                {time: '20h-21h30', subject: 'FCE online', type: 'homework', requireSubmit: true},
+                {time: '21h30-22h', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true}
+            ],
+            'Tuesday': [
+                {time: '16h30-17h30', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework', requireSubmit: true},
+                {time: '17h30-18h', subject: 'Eat', type: 'break', requireSubmit: false},
+                {time: '18h-20h', subject: 'Speaking Class (LIME)', type: 'class', requireSubmit: false, note: 'Nhớ mang sách và vở'},
+                {time: '20h30-21h30', subject: 'Go home + Shower', type: 'break', requireSubmit: false},
+                {time: '21h30-22h', subject: 'FCE online HW / chữa bài sai', type: 'homework', requireSubmit: true}
+            ],
+            'Wednesday': [
+                {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework', requireSubmit: true},
+                {time: '18h-19h', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
+                {time: '19h-20h30', subject: 'Maths cô Hải HW (2.5h)', type: 'homework', requireSubmit: true},
+                {time: '20h35-21h35', subject: 'FCE offline HW / chữa bài sai', type: 'homework', requireSubmit: true},
+                {time: '21h30-22h', subject: 'FCE Speaking HW / extra', type: 'homework', requireSubmit: true}
+            ],
+            'Thursday': [
+                {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework', requireSubmit: true},
+                {time: '18h-19h', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
+                {time: '19h-19h45', subject: 'FCE offline HW / chữa bài sai', type: 'homework', requireSubmit: true},
+                {time: '20h-21h', subject: 'FCE Online Class', type: 'class', requireSubmit: false, note: 'Nhớ mang sách FCE'},
+                {time: '21h35-22h', subject: 'FCE offline HW / chữa bài sai', type: 'homework', requireSubmit: true}
+            ],
+            'Friday': [
+                {time: '16h30-17h30', subject: 'Math HW cô Hải', type: 'homework', requireSubmit: true},
+                {time: '17h30-18h', subject: 'Eat', type: 'break', requireSubmit: false},
+                {time: '18h-20h30', subject: 'FCE Offline Class', type: 'class', requireSubmit: false, note: 'Nhớ mang sách FCE'},
+                {time: '21h30-22h', subject: 'Shower + Free time', type: 'break', requireSubmit: false}
+            ],
+            'Saturday': [
+                {time: '9h-12h', subject: 'Math HW cô Hải', type: 'homework', requireSubmit: true},
+                {time: '12h-14h30', subject: 'FCE online HW / chữa bài sai', type: 'homework', requireSubmit: true},
+                {time: '12h20-14h30', subject: 'Eat + Sleep', type: 'break', requireSubmit: false},
+                {time: '14h40-15h40', subject: 'FCE online HW / chữa bài sai', type: 'homework', requireSubmit: true},
+                {time: '15h45-16h45', subject: 'FCE Speaking HW', type: 'homework', requireSubmit: true},
+                {time: '16h50-19h', subject: 'Kick boxing', type: 'class', requireSubmit: false, note: 'Mang đồ tập'},
+                {time: '17h35-18h15', subject: 'Chuẩn bị bài Speaking Club', type: 'homework', requireSubmit: false},
+                {time: '19h-21h', subject: 'Speech Class', type: 'class', requireSubmit: false},
+                {time: '21h-22h', subject: 'Shower + Free time', type: 'break', requireSubmit: false}
+            ],
+            'Sunday': [
+                {time: '7h15', subject: 'Wake up', type: 'break', requireSubmit: false},
+                {time: '8h-8h15', subject: 'Eat breakfast', type: 'break', requireSubmit: false},
+                {time: '9h-10h', subject: 'Ukulele', type: 'homework', requireSubmit: false},
+                {time: '10h30-11h30', subject: 'Speaking Club', type: 'class', requireSubmit: false},
+                {time: '12h-13h30', subject: 'Math cô Hải', type: 'homework', requireSubmit: true},
+                {time: '13h30-15h', subject: 'Eat + Sleep', type: 'break', requireSubmit: false},
+                {time: '15h-16h', subject: 'FCE HW (cả lớp onl và lớp Off) Chữa và Hoàn thành bài mới', type: 'homework', requireSubmit: true},
+                {time: '16-17h', subject: 'FCE HW (cả lớp onl và lớp Off) Chữa và Hoàn thành bài mới', type: 'homework', requireSubmit: true},
+                {time: '17h05-18h', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
+                {time: '18h-19h', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true},
+                {time: '19h-20h', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true},
+                {time: '20h05-21h', subject: 'Chữa bài các môn Toán / hoàn thành BTVN các môn Toán', type: 'homework', requireSubmit: true},
+                {time: '21h-22h', subject: 'Đâu trường Gia Đình', type: 'break', requireSubmit: false}
+            ]
+        };
+
+        // Form templates
+        const FORM_TEMPLATES = {
+            'FCE Reading': {parts: 7, questions: [8,6,6,7,6,6,10]},
+            'FCE Writing': {parts: 2, questions: [1,1]},
+            'FCE Listening': {parts: 4, questions: [8,10,5,7]},
+            'FCE Speaking': {parts: 4, questions: [1,1,1,1]},
+            'Toán cô Hải - Chữa đề': {parts: 1, questions: [15]}
+        };
+
+        // Prompts for AI
+        const AI_PROMPTS = {
+            'Toán': `Chào Claude! Em đang làm bài toán lớp 8 và gặp khó khăn. Em sẽ chụp/mô tả đề bài.
+Bạn hãy:
+1. Đọc kỹ đề bài và xác nhận em hiểu đề đúng chưa
+2. Gợi ý hướng giải (KHÔNG giải luôn), đặt câu hỏi gợi mở để em tự suy nghĩ
+3. Nếu em vẫn chưa ra, hãy giải thích từng bước nhỏ, dừng lại để em làm tiếp
+4. Khuyến khích em tự làm, chỉ hướng dẫn khi thực sự cần
+Hãy kiên nhẫn và động viên em nhé!`,
+
+            'FCE Reading': `Chào Claude! Em đang luyện FCE Reading và có câu khó. Em sẽ chụp đoạn văn và câu hỏi.
+Bạn hãy:
+1. Giải thích từ vựng khó (nếu có) bằng tiếng Việt đơn giản
+2. Phân tích cấu trúc câu phức tạp
+3. Chỉ ra keywords trong câu hỏi và đoạn văn
+4. Hướng dẫn kỹ thuật làm dạng bài này
+5. GỢI Ý đáp án (không nói thẳng), để em tự chọn
+Mục tiêu của em là đạt C1 (180 điểm) nhé!`,
+
+            'FCE Writing': `Chào Claude! Em cần feedback cho bài FCE Writing.
+Yêu cầu đề bài: [em sẽ paste]
+Bài làm của em: [em sẽ paste/chụp]
+
+Bạn hãy đánh giá theo 4 tiêu chí FCE:
+1. Content (Có đủ ý? Có trả lời đúng yêu cầu không?)
+2. Communicative Achievement (Phong cách, giọng văn phù hợp?)
+3. Organisation (Bố cục rõ ràng? Linking words?)
+4. Language (Ngữ pháp, từ vựng đa dạng? Sai sót?)
+
+Cho điểm dự kiến (A2/B1/B2/C1) và GỢI Ý CẢI THIỆN CỤ THỂ để lên C1.
+Không viết lại toàn bộ bài giúp em, chỉ sửa 2-3 câu mẫu thôi nhé!`,
+
+            'FCE Listening': `Chào Claude! Em đang luyện FCE Listening và cần giải thích.
+Em sẽ mô tả câu hỏi và những gì em nghe được.
+
+Bạn hãy:
+1. Giải thích từ vựng/cụm từ khó trong audio
+2. Phân tích tại sao đáp án đúng là ... (nếu em biết đáp án)
+3. Hướng dẫn kỹ thuật nghe để bắt được thông tin
+4. Gợi ý cách cải thiện Listening để đạt C1
+
+Mục tiêu: C1 (180 điểm)`,
+
+            'FCE Speaking': `Chào Claude! Em muốn luyện FCE Speaking.
+Part [1/2/3/4]: [em mô tả]
+
+Bạn đóng vai examiner:
+1. Đưa câu hỏi theo format FCE
+2. Sau khi em trả lời, cho feedback ngắn về:
+   - Fluency (trôi chảy?)
+   - Grammar & Vocabulary (đa dạng?)
+   - Pronunciation tips (qua text, gợi ý phát âm chuẩn)
+3. Gợi ý cách trả lời tốt hơn để đạt C1
+4. Tiếp tục câu hỏi khác
+
+Hãy nghiêm khắc nhưng động viên em nhé!`,
+
+            'Yên Hòa': `Chào Claude! Em đang làm bài tập Yên Hòa và cần trợ giúp.
+Em sẽ chụp/mô tả đề bài.
+
+Bạn hãy:
+1. Đọc kỹ đề và xác nhận em hiểu đúng chưa
+2. Gợi ý hướng làm (không giải luôn)
+3. Giải thích các khái niệm nếu em chưa rõ
+4. Khuyến khích em tự làm
+
+Hãy kiên nhẫn với em nhé!`
+        };
+
+        // Global state
+        let currentSession = null;
+        let timerInterval = null;
+        let breakTimerInterval = null;
+        let workStartTime = null;
+        let completedSubjects = [];
+        let breakWarningTimeout = null;
+
+        // Initialize
+        window.onload = function() {
+            displayDate();
+            loadSchedule();
+            loadProgress();
+        };
+
+        function displayDate() {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const daysVi = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+            const today = new Date();
+            const dayName = days[today.getDay()];
+            const dayNameVi = daysVi[today.getDay()];
+            const dateStr = today.toLocaleDateString('vi-VN');
+            
+            document.getElementById('dateDisplay').textContent = `${dayNameVi}, ${dateStr}`;
+            
+            return dayName;
+        }
+
+        function loadSchedule() {
+            const dayName = displayDate();
+            const todaySchedule = SCHEDULE[dayName] || [];
+            const container = document.getElementById('scheduleContainer');
+            container.innerHTML = '';
+
+            todaySchedule.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'subject-card';
+                
+                if (item.type === 'class') {
+                    card.className += ' class-type';
+                }
+                
+                if (completedSubjects.includes(index)) {
+                    card.className += ' completed';
+                }
+                
+                if (currentSession && currentSession.index === index) {
+                    card.className += ' in-progress';
+                }
+
+                let typeLabel = '';
+                if (item.type === 'homework') typeLabel = '📝 Bài tập về nhà';
+                else if (item.type === 'class') typeLabel = '🏫 Học tại lớp';
+                else if (item.type === 'break') typeLabel = '☕ Nghỉ ngơi';
+
+                card.innerHTML = `
+                    <div class="time-badge">${item.time}</div>
+                    <div class="subject-name">${item.subject}</div>
+                    <div class="subject-type">${typeLabel}</div>
+                `;
+
+                card.onclick = () => handleSubjectClick(item, index);
+                container.appendChild(card);
+            });
+        }
+
+        function handleSubjectClick(subject, index) {
+            if (completedSubjects.includes(index)) {
+                alert('Môn này đã hoàn thành rồi! 🎉');
+                return;
+            }
+
+            if (subject.type === 'break') {
+                alert('Đây là thời gian nghỉ ngơi. Hãy thư giãn nhé! 😊');
+                return;
+            }
+
+            if (subject.type === 'class') {
+                showClassModal(subject, index);
+            } else if (subject.type === 'homework') {
+                showSetupModal(subject, index);
+            }
+        }
+
+        function showClassModal(subject, index) {
+            const modal = document.getElementById('classModal');
+            const info = document.getElementById('classInfo');
+            
+            info.innerHTML = `
+                <p style="font-size: 1.3em; margin: 20px 0;"><strong>${subject.subject}</strong></p>
+                <p style="font-size: 1.1em; color: #666; margin: 15px 0;">⏰ ${subject.time}</p>
+                <p style="font-size: 1em; color: #ff9800; margin: 15px 0;">📝 ${subject.note || 'Nhớ mang đầy đủ đồ dùng học tập'}</p>
+            `;
+            
+            modal.classList.add('active');
+            currentSession = {index, subject, type: 'class'};
+        }
+
+        function markClassComplete() {
+            if (currentSession) {
+                completedSubjects.push(currentSession.index);
+                saveProgress();
+                closeModal('classModal');
+                loadSchedule();
+                logActivity('Hoàn thành môn học tại lớp', currentSession.subject.subject);
+            }
+        }
+
+        function showSetupModal(subject, index) {
+            const modal = document.getElementById('setupModal');
+            const form = document.getElementById('setupForm');
+            
+            let formHTML = `
+                <div class="input-group">
+                    <label>Môn học:</label>
+                    <input type="text" value="${subject.subject}" disabled>
+                </div>
+
+                <div class="input-group">
+                    <label>Chế độ làm bài:</label>
+                    <div class="mode-selection">
+                        <div class="mode-card selected" onclick="selectMode('normal')" id="modeNormal">
+                            <div class="icon">📝</div>
+                            <div class="title">Làm bài thường</div>
+                            <div class="description">Có hỗ trợ Chat AI, gọi bố mẹ, theo dõi câu hỏi</div>
+                        </div>
+                        <div class="mode-card" onclick="selectMode('exam')" id="modeExam">
+                            <div class="icon">🎯</div>
+                            <div class="title">Chế độ luyện thi</div>
+                            <div class="description">Màn hình đen, chỉ có đồng hồ, tập trung cao độ như thi thật</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Chọn dạng bài:</label>
+                    <select id="formTemplate" onchange="updateFormTemplate()">
+                        <option value="">Tự nhập số câu</option>
+            `;
+            
+            for (let template in FORM_TEMPLATES) {
+                if (subject.subject.includes('FCE') && template.includes('FCE') ||
+                    subject.subject.includes('Toán') && template.includes('Toán') ||
+                    subject.subject.includes('Math') && template.includes('Toán')) {
+                    formHTML += `<option value="${template}">${template}</option>`;
+                }
+            }
+            
+            formHTML += `
+                    </select>
+                </div>
+                <div class="input-group" id="customInputs">
+                    <label>Số phần (parts):</label>
+                    <input type="number" id="numParts" value="1" min="1">
+                    <label style="margin-top: 10px;">Số câu mỗi phần (cách nhau bởi dấu phẩy):</label>
+                    <input type="text" id="numQuestions" placeholder="VD: 10,15,20" value="10">
+                </div>
+                <div class="input-group">
+                    <label>Thời gian dự kiến (phút):</label>
+                    <input type="number" id="targetTime" value="30" min="1">
+                    <p style="font-size: 0.9em; color: #666; margin-top: 5px;" id="aiSuggestion"></p>
+                </div>
+                <button class="btn btn-success" onclick="startWork()">Bắt đầu làm bài</button>
+            `;
+            
+            form.innerHTML = formHTML;
+            modal.classList.add('active');
+            currentSession = {index, subject, type: 'homework', mode: 'normal'};
+            
+            // AI suggestion for time
+            suggestTime(subject.subject);
+        }
+
+        function selectMode(mode) {
+            currentSession.mode = mode;
+            document.getElementById('modeNormal').classList.toggle('selected', mode === 'normal');
+            document.getElementById('modeExam').classList.toggle('selected', mode === 'exam');
+        }
+
+        function updateFormTemplate() {
+            const template = document.getElementById('formTemplate').value;
+            if (template && FORM_TEMPLATES[template]) {
+                const data = FORM_TEMPLATES[template];
+                document.getElementById('numParts').value = data.parts;
+                document.getElementById('numQuestions').value = data.questions.join(',');
+            }
+        }
+
+        function suggestTime(subject) {
+            const suggestions = {
+                'FCE Reading': 45,
+                'FCE Writing': 40,
+                'FCE Listening': 30,
+                'FCE Speaking': 20,
+                'Toán': 45,
+                'Math': 45,
+                'Yên Hòa': 30
+            };
+            
+            let suggested = 30;
+            for (let key in suggestions) {
+                if (subject.includes(key)) {
+                    suggested = suggestions[key];
+                    break;
+                }
+            }
+            
+            document.getElementById('targetTime').value = suggested;
+            document.getElementById('aiSuggestion').textContent = `💡 Gợi ý: ${suggested} phút dựa trên kết quả tốt nhất của bé`;
+        }
+
+        function startWork() {
+            const numParts = parseInt(document.getElementById('numParts').value);
+            const questionsStr = document.getElementById('numQuestions').value;
+            const targetTime = parseInt(document.getElementById('targetTime').value);
+            
+            const questions = questionsStr.split(',').map(q => parseInt(q.trim()));
+            if (questions.length !== numParts) {
+                alert('Số câu không khớp với số phần!');
+                return;
+            }
+            
+            currentSession.numParts = numParts;
+            currentSession.questions = questions;
+            currentSession.targetTime = targetTime * 60; // convert to seconds
+            currentSession.completedQuestions = [];
+            currentSession.startTime = Date.now();
+            currentSession.callParentLogs = [];
+            
+            closeModal('setupModal');
+            
+            if (currentSession.mode === 'exam') {
+                showExamMode();
+            } else {
+                showWorkModal();
+            }
+        }
+
+        function showExamMode() {
+            const screen = document.getElementById('examModeScreen');
+            const subjectEl = document.getElementById('examSubject');
+            
+            subjectEl.textContent = currentSession.subject.subject;
+timerEl.style.display = 'none'; // Ẩn đồng hồ ban đầu
+            screen.classList.add('active');
+            
+            workStartTime = Date.now();
+            timerInterval = setInterval(updateExamTimer, 1000);
+            
+            logActivity('Bắt đầu luyện thi', currentSession.subject.subject);
+        }
+
+        function updateExamTimer() {
+    const elapsed = Math.floor((Date.now() - workStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeLeft = currentSession.targetTime - elapsed;
+    
+    const display = document.getElementById('examTimer');
+    const finishBtn = document.querySelector('.exam-finish-btn');
+    
+    // Hiện đồng hồ khi còn 15 phút (900 giây)
+    if (timeLeft <= 900 && timeLeft > 0) {
+        display.style.display = 'block';
+        display.textContent = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
+        display.classList.remove('warning', 'danger'); // Không nhấp nháy
+    }
+    
+    // Hết giờ
+   // Hết giờ
+if (elapsed >= currentSession.targetTime) {
+    clearInterval(timerInterval);
+    playAlarm();
+    display.textContent = '00:00';
+    display.style.display = 'block';
+    
+    // Hiện hướng dẫn nộp bài
+    const subjectEl = document.getElementById('examSubject');
+    subjectEl.innerHTML = `
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+            <div style="font-size: 1.5em; color: #ffc107; margin-bottom: 15px;">⏰ HẾT GIỜ LÀM BÀI!</div>
+            <div style="font-size: 1em; color: #fff; text-align: left; line-height: 1.8;">
+                <strong style="color: #4caf50;">📋 5 phút để nộp bài:</strong><br>
+                1️⃣ Chụp/Scan bài → Tạo PDF<br>
+                2️⃣ Gửi Zalo → Tải về máy tính<br>
+                3️⃣ Bấm nút "Nộp bài" bên dưới<br>
+            </div>
+        </div>
+    `;
+    
+    finishBtn.textContent = '📤 Nộp bài (5 phút)';
+    finishBtn.style.display = 'block';
+        
+        // Bắt đầu đếm ngược 5 phút cho scan & upload
+        currentSession.uploadStartTime = Date.now();
+        currentSession.uploadTimeLimit = 300; // 5 phút = 300 giây
+        timerInterval = setInterval(updateUploadTimer, 1000);
+        
+        logActivity('⏰ Hết giờ làm bài', currentSession.subject.subject);
+    }
+}
+
+function updateUploadTimer() {
+    const elapsed = Math.floor((Date.now() - currentSession.uploadStartTime) / 1000);
+    const timeLeft = currentSession.uploadTimeLimit - elapsed;
+    
+    const display = document.getElementById('examTimer');
+    const finishBtn = document.querySelector('.exam-finish-btn');
+    
+    if (timeLeft > 0) {
+        display.textContent = `Còn ${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')} để nộp`;
+    } else {
+        clearInterval(timerInterval);
+        display.textContent = 'Hết giờ nộp bài!';
+        finishBtn.textContent = '✅ Hoàn thành (không nộp)';
+    }
+}
+
+        function showWorkModal() {
+            const modal = document.getElementById('workModal');
+            const title = document.getElementById('workTitle');
+            const tracker = document.getElementById('questionTracker');
+            
+            title.textContent = currentSession.subject.subject;
+            
+            // Create question tracker
+            tracker.innerHTML = '';
+            let questionNum = 1;
+            for (let i = 0; i < currentSession.numParts; i++) {
+                for (let j = 0; j < currentSession.questions[i]; j++) {
+                    const qItem = document.createElement('div');
+                    qItem.className = 'question-item';
+                    qItem.textContent = questionNum;
+                    qItem.onclick = () => toggleQuestion(questionNum - 1, qItem);
+                    tracker.appendChild(qItem);
+                    questionNum++;
+                }
+            }
+            
+            modal.classList.add('active');
+            startTimer();
+        }
+
+        function toggleQuestion(index, element) {
+            if (currentSession.completedQuestions.includes(index)) {
+                currentSession.completedQuestions = currentSession.completedQuestions.filter(q => q !== index);
+                element.classList.remove('completed');
+            } else {
+                currentSession.completedQuestions.push(index);
+                element.classList.add('completed');
+                
+                if (Math.random() > 0.7) {
+                    showEncouragement();
+                }
+            }
+        }
+
+        function showEncouragement() {
+            const messages = [
+                '💪 Làm tốt lắm!',
+                '🌟 Xuất sắc!',
+                '🎯 Chính xác!',
+                '🚀 Tiếp tục nhé!',
+                '⭐ Giỏi quá!',
+                '🎉 Tuyệt vời!'
+            ];
+            
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            showAlert(msg, 2000);
+        }
+
+        function startTimer() {
+            workStartTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - workStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            const display = document.getElementById('timerDisplay');
+            display.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (elapsed > currentSession.targetTime) {
+                display.classList.add('danger');
+                
+                if ((elapsed - currentSession.targetTime) % 300 === 0 && (elapsed - currentSession.targetTime) > 0) {
+                    showOvertimeAlert(elapsed - currentSession.targetTime);
+                }
+            } else if (elapsed > currentSession.targetTime * 0.8) {
+                display.classList.add('warning');
+            }
+        }
+
+        function showOvertimeAlert(overtime) {
+            const minutes = Math.floor(overtime / 60);
+            showAlert(`⚠️ Con đã làm quá ${minutes} phút so với dự kiến. Con có cần trợ giúp không?`, 10000);
+            
+            logActivity('Cảnh báo làm bài quá lâu', `Quá ${minutes} phút - ${currentSession.subject.subject}`);
+        }
+
+       // Tìm và THAY THẾ hàm openChatAI() trong honey.html (dòng ~960)
+function openChatAI() {
+    const popup = document.getElementById('chatPopup');
+    const promptBox = document.getElementById('promptBox');
+    
+    let prompt = '';
+    const subjectName = currentSession.subject.subject;
+    
+    if (subjectName.includes('Toán') || subjectName.includes('Math')) {
+        prompt = AI_PROMPTS['Toán'];
+    } else if (subjectName.includes('FCE Reading')) {
+        prompt = AI_PROMPTS['FCE Reading'];
+    } else if (subjectName.includes('FCE Writing')) {
+        prompt = AI_PROMPTS['FCE Writing'];
+    } else if (subjectName.includes('FCE Listening')) {
+        prompt = AI_PROMPTS['FCE Listening'];
+    } else if (subjectName.includes('FCE Speaking')) {
+        prompt = AI_PROMPTS['FCE Speaking'];
+    } else if (subjectName.includes('Yên Hòa')) {
+        prompt = AI_PROMPTS['Yên Hòa'];
+    } else {
+        prompt = `Chào Claude! Em đang làm bài ${subjectName} và cần trợ giúp. Em sẽ mô tả đề bài. Hãy giúp em nhé!`;
+    }
+    
+    promptBox.textContent = prompt;
+    popup.classList.add('active');
+    
+    // ✅ GHI LOG ĐÚNG CÁCH để đếm được
+    logActivity('Mở chat AI', subjectName);
+}
+
+        function closeChatAI() {
+            document.getElementById('chatPopup').classList.remove('active');
+        }
+
+        function copyPrompt() {
+            const prompt = document.getElementById('promptBox').textContent;
+            navigator.clipboard.writeText(prompt).then(() => {
+                alert('✅ Đã sao chép! Hãy dán vào Claude.ai nhé!');
+            });
+        }
+
+        function openClaudeAI() {
+            window.open('https://claude.ai', '_blank');
+        }
+
+        function callParent(who) {
+            const time = new Date().toLocaleTimeString('vi-VN');
+            currentSession.callParentLogs.push({who, time});
+            logActivity(`Gọi ${who}`, `${currentSession.subject.subject} - ${time}`);
+            alert(`📞 Đã ghi nhận: Gọi ${who} lúc ${time}`);
+        }
+
+        function finishWork() {
+            clearInterval(timerInterval);
+            
+            const totalTime = Math.floor((Date.now() - workStartTime) / 1000);
+            const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
+            const completed = currentSession.mode === 'exam' ? totalQuestions : currentSession.completedQuestions.length;
+            
+            currentSession.totalTime = totalTime;
+            currentSession.completionRate = (completed / totalQuestions * 100).toFixed(1);
+            
+            if (currentSession.mode === 'exam') {
+                document.getElementById('examModeScreen').classList.remove('active');
+            } else {
+                closeModal('workModal');
+            }
+            
+            showResultModal();
+        }
+
+        function showResultModal() {
+            const modal = document.getElementById('resultModal');
+            const content = document.getElementById('resultContent');
+            
+            const totalTime = currentSession.totalTime;
+            const targetTime = currentSession.targetTime;
+            const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
+            const completed = currentSession.mode === 'exam' ? totalQuestions : currentSession.completedQuestions.length;
+            const avgTime = (totalTime / completed).toFixed(1);
+            
+            const minutesUsed = Math.floor(totalTime / 60);
+            const secondsUsed = totalTime % 60;
+            const minutesTarget = Math.floor(targetTime / 60);
+            
+            let reward = 0;
+            let rewardReason = [];
+            
+            if (totalTime <= targetTime) {
+                reward += 2000;
+                rewardReason.push('Hoàn thành đúng thời gian: +2,000đ');
+            }
+            
+            if (totalTime <= targetTime * 0.8) {
+                reward += 1000;
+                rewardReason.push('Làm nhanh hơn 20%: +1,000đ');
+            }
+            
+            if (completed === totalQuestions) {
+                reward += 2000;
+                rewardReason.push('Hoàn thành 100%: +2,000đ');
+            } else if (completed >= totalQuestions * 0.9) {
+                reward += 1000;
+                rewardReason.push('Hoàn thành 90%+: +1,000đ');
+            }
+            
+            if (currentSession.mode === 'exam') {
+                reward += 1000;
+                rewardReason.push('Chế độ luyện thi (bonus): +1,000đ');
+            }
+            
+            currentSession.reward = reward;
+            
+            let encouragement = '';
+            if (completed === totalQuestions && totalTime <= targetTime) {
+                encouragement = '🌟 Xuất sắc! Con đã làm bài rất tốt!';
+            } else if (completed >= totalQuestions * 0.8) {
+                encouragement = '💪 Tốt lắm! Con đang tiến bộ!';
+            } else {
+                encouragement = '🎯 Con cố gắng nhé! Lần sau sẽ tốt hơn!';
+            }
+            
+            let slowWarning = '';
+            if (currentSession.mode !== 'exam' && avgTime > 3) {
+                slowWarning = `<div class="encouragement" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+                    ⚠️ Con làm trung bình mỗi câu mất ${avgTime} phút. 
+                    ${currentSession.callParentLogs.length === 0 ? 'Con đã thử dùng Chat AI chưa nhỉ?' : ''}
+                    Hãy tập trung hơn và sử dụng công cụ hỗ trợ khi cần nhé!
+                </div>`;
+            }
+            
+            content.innerHTML = `
+                <div class="stats-summary">
+                    <div class="stat-row">
+                        <span><strong>Chế độ:</strong></span>
+                        <span>${currentSession.mode === 'exam' ? '🎯 Luyện thi' : '📝 Làm bài thường'}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span><strong>Thời gian làm bài:</strong></span>
+                        <span>${minutesUsed} phút ${secondsUsed} giây</span>
+                    </div>
+                    <div class="stat-row">
+                        <span><strong>Mục tiêu:</strong></span>
+                        <span>${minutesTarget} phút</span>
+                    </div>
+                    <div class="stat-row">
+                        <span><strong>Hoàn thành:</strong></span>
+                        <span>${completed}/${totalQuestions} câu (${currentSession.completionRate}%)</span>
+                    </div>
+                    <div class="stat-row">
+                        <span><strong>Trung bình mỗi câu:</strong></span>
+                        <span>${avgTime} phút</span>
+                    </div>
+                    ${currentSession.mode !== 'exam' ? `<div class="stat-row">
+                        <span><strong>Số lần gọi bố mẹ:</strong></span>
+                        <span>${currentSession.callParentLogs.length} lần</span>
+                    </div>` : ''}
+                </div>
+                
+                <div class="encouragement">${encouragement}</div>
+                ${slowWarning}
+                
+                <div class="reward-display">
+                    💰 Tiền thưởng: ${reward.toLocaleString('vi-VN')}đ
+                </div>
+                
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin: 15px 0;">
+                    <strong>Chi tiết thưởng:</strong>
+                    ${rewardReason.map(r => `<div style="margin: 5px 0;">✓ ${r}</div>`).join('')}
+                </div>
+                
+                <p style="text-align: center; color: #666; margin: 20px 0;">
+                    ${currentSession.subject.requireSubmit ? 'Bạn có muốn nộp bài để chấm không?' : 'Bài này không cần nộp'}
+                </p>
+               ${currentSession.subject.requireSubmit ? `
+    <div class="submit-guide">
+        <h3>📋 Hướng dẫn nộp bài (5 phút):</h3>
+        <ol>
+            <li><strong>Bước 1:</strong> Chụp/Scan tất cả các trang bài làm bằng điện thoại</li>
+            <li><strong>Bước 2:</strong> Tạo file PDF (dùng CamScanner hoặc tính năng scan của điện thoại)</li>
+            <li><strong>Bước 3:</strong> Gửi file PDF lên Zalo (gửi cho chính mình hoặc nhóm)</li>
+            <li><strong>Bước 4:</strong> Mở Zalo trên máy tính → Tải file PDF xuống</li>
+            <li><strong>Bước 5:</strong> Bấm nút "📤 Nộp bài" → Chọn file PDF vừa tải</li>
+        </ol>
+        <div class="submit-warning timer-warning">
+            ⏰ Con có 5 phút để hoàn thành! Hãy nhanh tay nhé!
+        </div>
+    </div>
+    <button class="btn btn-success" onclick="submitWork()">📤 Nộp bài để chấm</button>
+` : '<p style="text-align: center; color: #666; margin: 20px 0;">Bài này không cần nộp</p>'}
+<button class="btn btn-secondary" onclick="skipSubmit()">Bỏ qua</button>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        async function submitWork() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf,image/*';
+    input.multiple = true;
+    
+    input.onchange = async function(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) {
+            alert('❌ Chưa chọn file nào!');
+            return;
+        }
+        
+        showLoading('📤 Đang upload bài làm lên Drive...');
+        
+        try {
+            // Upload từng file
+            const uploadResults = [];
+            
+            for (let file of files) {
+                // Convert to base64
+                const fileBase64 = await fileToBase64(file);
+                
+                // Gọi Cloud Function upload
+                const uploadResponse = await fetch(`${FUNCTIONS_URL}/uploadToGDrive`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        fileBase64: fileBase64.split(',')[1], // Bỏ phần "data:...;base64,"
+                        subject: currentSession.subject.subject,
+                        sessionDate: new Date().toISOString()
+                    })
+                });
+                
+                const uploadData = await uploadResponse.json();
+                
+                if (!uploadData.success) {
+                    throw new Error(`Upload failed: ${uploadData.error}`);
+                }
+                
+                uploadResults.push({
+                    fileName: file.name,
+                    fileId: uploadData.fileId,
+                    driveUrl: uploadData.driveUrl,
+                    fileBase64: fileBase64.split(',')[1] // Lưu để chấm bài
+                });
+            }
+            
+            hideLoading();
+            
+            // Lưu thông tin vào session
+            currentSession.submittedFiles = uploadResults;
+            
+            // Hỏi có muốn chấm ngay không
+            const wantGrade = confirm(
+                `✅ Đã upload ${files.length} file lên Drive!\n\n` +
+                `🔗 Xem tại: ${uploadResults[0].driveUrl}\n\n` +
+                `🤖 Bạn có muốn AI chấm bài ngay không?`
+            );
+            
+            if (wantGrade) {
+                await gradeAssignment(uploadResults[0].fileId, uploadResults[0].fileBase64);
+            } else {
+                alert('📝 Bài làm đã được lưu. Mẹ sẽ chấm sau nhé!');
+                skipSubmit();
+            }
+            
+        } catch (error) {
+            hideLoading();
+            console.error('Upload error:', error);
+            alert('❌ Lỗi khi upload: ' + error.message);
+        }
+    };
+    
+    input.click();
+}
+
+// Chấm bài với Groq
+async function gradeAssignment(fileId, fileBase64) {
+    showLoading('🤖 AI đang chấm bài... (10-30 giây)');
+    
+    try {
+        const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
+        
+        const gradeResponse = await fetch(`${FUNCTIONS_URL}/gradeAssignment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                submissionId: fileId,
+                fileBase64: fileBase64,
+                subject: currentSession.subject.subject,
+                totalQuestions: totalQuestions
+            })
+        });
+        
+        const gradeData = await gradeResponse.json();
+        
+        if (!gradeData.success) {
+            throw new Error(gradeData.error);
+        }
+        
+        hideLoading();
+        
+        // Hiển thị kết quả
+        showGradingResult(gradeData.result);
+        
+    } catch (error) {
+        hideLoading();
+        console.error('Grading error:', error);
+        alert('❌ Lỗi khi chấm bài: ' + error.message + '\n\nMẹ sẽ chấm thủ công nhé!');
+        skipSubmit();
+    }
+}
+
+// Hiển thị kết quả chấm
+function showGradingResult(result) {
+    const modal = document.getElementById('resultModal');
+    const content = document.getElementById('resultContent');
+    
+    const isMath = currentSession.subject.subject.includes('Toán') || 
+                   currentSession.subject.subject.includes('Math');
+    
+    let detailHTML = '';
+    
+    if (isMath) {
+        // Hiển thị kết quả Toán
+        detailHTML = `
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 20px; text-align: center;">
+                <div style="font-size: 3em; font-weight: bold;">${result.totalScore}/${result.maxScore}</div>
+                <div style="font-size: 1.2em; margin-top: 10px;">Điểm: ${result.percentage}%</div>
+            </div>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">📝 Chi tiết từng câu:</h3>
+                ${result.questions.map(q => `
+                    <div style="background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid ${q.answerCorrect ? '#4caf50' : '#ff5252'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <strong>Câu ${q.number}</strong>
+                            <span style="background: ${q.answerCorrect ? '#4caf50' : '#ff5252'}; color: white; padding: 3px 10px; border-radius: 5px;">
+                                ${q.score}/${q.maxScore} điểm
+                            </span>
+                        </div>
+                        <p style="color: #666; margin-top: 10px;">${q.feedback}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        // Hiển thị kết quả FCE
+        detailHTML = `
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 20px; text-align: center;">
+                <div style="font-size: 2.5em; font-weight: bold;">${result.cefrLevel}</div>
+                <div style="font-size: 1.2em; margin-top: 10px;">${result.totalScore}/${result.maxScore} điểm</div>
+                <div style="font-size: 1em; margin-top: 5px; opacity: 0.9;">Target: ${result.targetLevel}</div>
+            </div>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">📊 Tiêu chí chấm:</h3>
+                ${Object.entries(result.criteria).map(([key, value]) => `
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="text-transform: capitalize;">${key}</span>
+                            <strong>${value}/5</strong>
+                        </div>
+                        <div style="background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden;">
+                            <div style="background: #667eea; height: 100%; width: ${value * 20}%;"></div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            ${result.specificFeedback && result.specificFeedback.length > 0 ? `
+            <div style="background: #fff3cd; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="color: #856404; margin-bottom: 15px;">✏️ Lỗi cần sửa:</h3>
+                ${result.specificFeedback.map(fb => `
+                    <div style="padding: 10px; background: white; border-radius: 5px; margin-bottom: 10px;">
+                        ${fb}
+                    </div>
+                `).join('')}
+            </div>
+            ` : ''}
+        `;
+    }
+    
+    // Điểm mạnh & cần cải thiện
+    detailHTML += `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="background: #e8f5e9; padding: 20px; border-radius: 10px;">
+                <h3 style="color: #2e7d32; margin-bottom: 10px;">💪 Điểm mạnh:</h3>
+                <ul style="margin-left: 20px;">
+                    ${result.strengths.map(s => `<li style="margin: 5px 0;">${s}</li>`).join('')}
+                </ul>
+            </div>
+            <div style="background: #fff3e0; padding: 20px; border-radius: 10px;">
+                <h3 style="color: #e65100; margin-bottom: 10px;">📈 Cần cải thiện:</h3>
+                <ul style="margin-left: 20px;">
+                    ${result.improvements.map(i => `<li style="margin: 5px 0;">${i}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="encouragement" style="margin-bottom: 20px;">
+            ${result.overall}
+        </div>
+        
+        <button class="btn btn-success" onclick="closeResultModalAndContinue()" style="width: 100%;">Tiếp tục học</button>
+    `;
+    
+    content.innerHTML = `
+        <h2 style="color: #667eea; margin-bottom: 20px;">🤖 Kết quả chấm bài AI</h2>
+        ${detailHTML}
+    `;
+    
+    modal.classList.add('active');
+}
+
+// Helper: Close modal và tiếp tục
+function closeResultModalAndContinue() {
+    closeModal('resultModal');
+    skipSubmit();
+}
+
+// Helper functions
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function showLoading(message) {
+    let overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+        `;
+        document.body.appendChild(overlay);
+    }
+    
+    overlay.innerHTML = `
+        <div style="font-size: 3em; margin-bottom: 20px; animation: spin 1s linear infinite;">⏳</div>
+        <div style="font-size: 1.5em; text-align: center; padding: 0 20px;">${message}</div>
+    `;
+    overlay.style.display = 'flex';
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+
+
+        function skipSubmit() {
+    completedSubjects.push(currentSession.index);
+    saveProgress();
+    closeModal('resultModal');
+    loadSchedule();
+    
+    saveSessionData();
+    
+    // Nếu là chế độ thi thì nghỉ 10 phút, không thì 5 phút
+    const breakTime = currentSession.mode === 'exam' ? 10 : 5;
+    showBreakModal(breakTime);
+}
+
+        function closeResultModal() {
+            closeModal('resultModal');
+            completedSubjects.push(currentSession.index);
+            saveProgress();
+            loadSchedule();
+            showBreakModal();
+        }
+
+        function showBreakModal(breakMinutes = 5) {
+    const modal = document.getElementById('breakModal');
+    const title = modal.querySelector('h2');
+    title.textContent = `☕ Nghỉ giải lao (${breakMinutes} phút)`;
+    modal.classList.add('active');
+    startBreakTimer(breakMinutes * 60);
+}
+
+function startBreakTimer(seconds) {
+    let timeLeft = seconds;
+    const display = document.getElementById('breakTimer');
+    display.textContent = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
+    
+    breakTimerInterval = setInterval(() => {
+        timeLeft--;
+        const minutes = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
+        display.textContent = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(breakTimerInterval);
+            playAlarm();
+            alert('⏰ Hết giờ nghỉ rồi! Chuẩn bị học tiếp nhé! 💪');
+            skipBreak();
+        }
+    }, 1000);
+            
+            breakWarningTimeout = setTimeout(() => {
+                logActivity('⚠️ CẢNH BÁO', 'Đã quá 7 phút nghỉ giải lao, chưa thấy con hoạt động');
+            }, 420000); // 7 minutes
+        }
+
+        function playAlarm() {
+            const audio = document.getElementById('alarmSound');
+            audio.play().catch(e => console.log('Cannot play alarm:', e));
+        }
+
+        function selectActivity(activity) {
+            logActivity('Hoạt động giải lao', activity);
+            alert(`Tuyệt! Hãy ${activity.toLowerCase()} nhé! 😊`);
+        }
+
+        function skipBreak() {
+            clearInterval(breakTimerInterval);
+            clearTimeout(breakWarningTimeout);
+            closeModal('breakModal');
+            currentSession = null;
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function showAlert(message, duration = 5000) {
+            const banner = document.getElementById('alertBanner');
+            const messageEl = document.getElementById('alertMessage');
+            messageEl.textContent = message;
+            banner.classList.add('active');
+            
+            setTimeout(() => {
+                banner.classList.remove('active');
+            }, duration);
+        }
+
+        function saveProgress() {
+            localStorage.setItem('completedSubjects', JSON.stringify(completedSubjects));
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem('completedSubjects');
+            if (saved) {
+                completedSubjects = JSON.parse(saved);
+            }
+            
+            const lastReset = localStorage.getItem('lastReset');
+            const today = new Date().toDateString();
+            if (lastReset !== today) {
+                completedSubjects = [];
+                localStorage.setItem('lastReset', today);
+                localStorage.setItem('completedSubjects', JSON.stringify([]));
+            }
+        }
+
+        // Tìm và THAY THẾ hàm saveSessionData() trong honey.html (dòng ~1180)
+function saveSessionData() {
+    // Tính số lần dùng Chat AI từ activity logs
+    let aiChatCount = 0;
+    const logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+    logs.forEach(log => {
+        if (log.type === 'Mở chat AI' && log.detail.includes(currentSession.subject.subject)) {
+            aiChatCount++;
+        }
+    });
+
+    // Tạo danh sách câu hỏi từ tracking
+    const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
+    const questionsList = [];
+    for (let i = 0; i < totalQuestions; i++) {
+        questionsList.push({
+            completed: currentSession.mode === 'exam' ? true : currentSession.completedQuestions.includes(i),
+            timeSpent: currentSession.mode === 'exam' ? Math.floor(currentSession.totalTime / totalQuestions) : null
+        });
+    }
+
+    // Tạo feedback tự động
+    let feedback = '';
+    if (currentSession.completionRate >= 100 && currentSession.totalTime <= currentSession.targetTime) {
+        feedback = '🌟 Xuất sắc! Con đã hoàn thành đúng giờ và đầy đủ!';
+    } else if (currentSession.completionRate >= 90) {
+        feedback = '💪 Rất tốt! Con đang tiến bộ đều đặn!';
+    } else if (currentSession.totalTime > currentSession.targetTime * 1.5) {
+        feedback = '⚠️ Con làm chậm hơn dự kiến. Hãy tập trung hơn hoặc hỏi bố mẹ nhé!';
+    } else {
+        feedback = '👍 Cố gắng lên! Lần sau sẽ tốt hơn!';
+    }
+
+    const sessionData = {
+        id: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9), // Tạo ID duy nhất
+        date: new Date().toISOString(),
+        subject: currentSession.subject.subject,
+        mode: currentSession.mode,
+        time: currentSession.totalTime,
+        targetTime: currentSession.targetTime,
+        completionRate: currentSession.completionRate,
+        reward: currentSession.reward,
+        
+        // ✅ THÊM các trường còn thiếu
+        questions: questionsList,
+        aiChatCount: aiChatCount,
+        callParentCount: currentSession.callParentLogs ? currentSession.callParentLogs.length : 0,
+        callParentLogs: currentSession.callParentLogs || [],
+        feedback: feedback,
+        
+        // Thêm điểm số nếu có nộp bài
+        score: currentSession.submittedFiles ? undefined : undefined, // Sẽ được cập nhật khi chấm
+        total: totalQuestions,
+        
+        // Thêm trạng thái thưởng
+        paid: false,
+        paidDate: null,
+        
+        // Thêm thông tin nộp bài
+        submittedFiles: currentSession.submittedFiles || null
+    };
+    
+    let history = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
+    history.push(sessionData);
+    localStorage.setItem('sessionHistory', JSON.stringify(history));
+    
+    console.log('✅ Session saved with full data:', sessionData);
+}
+// FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyBv5qOVgNajnOKoz-vaIYENSWZY2jB8N30",
+  authDomain: "honey-4d9b1.firebaseapp.com",
+  projectId: "honey-4d9b1",
+  storageBucket: "honey-4d9b1.firebasestorage.app",
+  messagingSenderId: "108470975596",
+  appId: "1:108470975596:web:c3223c55e7afbd9276ac49"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// URL của Firebase Functions (sau khi deploy)
+const FUNCTIONS_URL = 'https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net'; // ⚠️ THAY ĐỔI
+
+        function logActivity(type, detail) {
+            const log = {
+                timestamp: new Date().toISOString(),
+                type: type,
+                detail: detail
+            };
+            
+            let logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+            logs.push(log);
+            localStorage.setItem('activityLogs', JSON.stringify(logs));
+            
+            console.log('Activity logged:', log);
+        }
+ const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+
+    </script>
+</body>
+</html>
