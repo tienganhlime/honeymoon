@@ -1929,7 +1929,7 @@ async function saveSessionData() {
         submittedFiles: currentSession.submittedFiles || null
     };
     
-    llet history = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
+    let history = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
 sessionData.id = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 history.push(sessionData);
 localStorage.setItem('sessionHistory', JSON.stringify(history));
@@ -1946,6 +1946,7 @@ try {
     });
 } catch (error) {
     console.error('❌ Firebase save error:', error);
+}
 }
 
 const firebaseConfig = {
