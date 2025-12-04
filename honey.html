@@ -1879,7 +1879,7 @@ function loadProgress() {
     }
 }
 
-function saveSessionData() {
+async function saveSessionData() {
     let aiChatCount = 0;
     const logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
     logs.forEach(log => {
@@ -1929,11 +1929,23 @@ function saveSessionData() {
         submittedFiles: currentSession.submittedFiles || null
     };
     
-    let history = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
-    history.push(sessionData);
-    localStorage.setItem('sessionHistory', JSON.stringify(history));
+    llet history = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
+sessionData.id = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+history.push(sessionData);
+localStorage.setItem('sessionHistory', JSON.stringify(history));
+
+// ✅ LƯU LÊN FIREBASE
+try {
+    await db.collection('sessions').add(sessionData);
+    console.log('✅ Session saved to Firebase:', sessionData);
     
-    console.log('✅ Session saved with full data:', sessionData);
+    await db.collection('activityLogs').add({
+        timestamp: new Date().toISOString(),
+        type: 'Hoàn thành bài tập',
+        detail: `${currentSession.subject.subject} - ${currentSession.completionRate}%`
+    });
+} catch (error) {
+    console.error('❌ Firebase save error:', error);
 }
 
 const firebaseConfig = {
@@ -2084,6 +2096,32 @@ async function sendMessage() {
     document.getElementById('messageToParent').value = '';
     loadMessages();
 }
+
+// Chạy 1 lần để đẩy dữ liệu cũ lên Firebase
+async function migrateLocalDataToFirebase() {
+    const oldData = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
+    if (oldData.length === 0) {
+        console.log('Không có dữ liệu cũ để migrate');
+        return;
+    }
+    
+    console.log(`Đang đẩy ${oldData.length} sessions lên Firebase...`);
+    let count = 0;
+    
+    for (const session of oldData) {
+        try {
+            await db.collection('sessions').add(session);
+            count++;
+        } catch (e) {
+            console.error('Lỗi migrate session:', e);
+        }
+    }
+    
+    alert(`✅ Đã đẩy ${count}/${oldData.length} sessions lên Firebase!`);
+}
+
+// GỌI HÀM NÀY 1 LẦN để migrate
+migrateLocalDataToFirebase();
 </script>
 </body>
 </html>
