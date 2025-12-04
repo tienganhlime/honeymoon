@@ -1284,51 +1284,57 @@ async function saveScheduleToFirebase() {
     };
 }
 
-        function renderRewards() {
-            // Calculate rewards
-            const today = new Date();
-            const weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - today.getDay());
-            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+       function renderRewards() {
+    // Calculate rewards
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-            const unpaid = sessionHistory.filter(s => !s.paid).reduce((sum, s) => sum + (s.reward || 0), 0);
-            const paidThisWeek = sessionHistory.filter(s => s.paid && new Date(s.paidDate) >= weekStart)
-                .reduce((sum, s) => sum + (s.reward || 0), 0);
-            const totalThisMonth = sessionHistory.filter(s => new Date(s.date) >= monthStart)
-                .reduce((sum, s) => sum + (s.reward || 0), 0);
+    const unpaid = sessionHistory.filter(s => !s.paid).reduce((sum, s) => sum + (s.reward || 0), 0);
+    const paidThisWeek = sessionHistory.filter(s => s.paid && new Date(s.paidDate) >= weekStart)
+        .reduce((sum, s) => sum + (s.reward || 0), 0);
+    const totalThisMonth = sessionHistory.filter(s => new Date(s.date) >= monthStart)
+        .reduce((sum, s) => sum + (s.reward || 0), 0);
 
-            document.getElementById('unpaidReward').textContent = `${unpaid.toLocaleString('vi-VN')}đ`;
-            document.getElementById('paidThisWeek').textContent = `${paidThisWeek.toLocaleString('vi-VN')}đ`;
-            document.getElementById('totalThisMonth').textContent = `${totalThisMonth.toLocaleString('vi-VN')}đ`;
+    document.getElementById('unpaidReward').textContent = `${unpaid.toLocaleString('vi-VN')}đ`;
+    document.getElementById('paidThisWeek').textContent = `${paidThisWeek.toLocaleString('vi-VN')}đ`;
+    document.getElementById('totalThisMonth').textContent = `${totalThisMonth.toLocaleString('vi-VN')}đ`;
 
-            // Render history
-            const container = document.getElementById('rewardHistory');
-            const rewardSessions = sessionHistory.filter(s => s.reward && s.reward > 0).reverse();
+    // Render history
+    const container = document.getElementById('rewardHistory');
+    const rewardSessions = sessionHistory.filter(s => s.reward && s.reward > 0).reverse();
 
-            if (rewardSessions.length === 0) {
-                container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Chưa có lịch sử thưởng.</p>';
-                return;
-            }
+    if (rewardSessions.length === 0) {
+        container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Chưa có lịch sử thưởng.</p>';
+        return;
+    }
 
-            container.innerHTML = rewardSessions.map(session => {
-                const date = new Date(session.date).toLocaleDateString('vi-VN');
-                return `
-                    <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>${session.subject}</strong><br>
-                            <small style="color: #666;">${date}</small>
-                        </div>
-                        <div style="text-align: right;">
-                            <div class="reward-badge">${session.reward.toLocaleString('vi-VN')}đ</div>
-                            ${session.paid ? 
-                                '<div style="color: #4caf50; font-size: 0.9em; margin-top: 5px;">✅ Đã trả</div>' : 
-                                '<button class="btn btn-small btn-success" onclick="markAsPaid(\''+session.id+'\')">Đánh dấu đã trả</button>'
-                            }
-                        </div>
+    container.innerHTML = rewardSessions.map(session => {
+        const date = new Date(session.date).toLocaleDateString('vi-VN');
+        const time = new Date(session.date).toLocaleTimeString('vi-VN');
+        return `
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <strong>${session.subject}</strong><br>
+                        <small style="color: #666;">${date} ${time}</small>
+                        ${session.feedback ? `<br><small style="color: #888; font-style: italic;">"${session.feedback.substring(0, 100)}..."</small>` : ''}
                     </div>
-                `;
-            }).join('');
-        }
+                    <div class="reward-badge">${session.reward.toLocaleString('vi-VN')}đ</div>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+                    ${session.paid ? 
+                        '<div style="color: #4caf50; font-size: 0.9em;">✅ Đã trả</div>' : 
+                        '<button class="btn btn-small btn-success" onclick="markAsPaid(\''+session.id+'\')">Đánh dấu đã trả</button>'
+                    }
+                    <button class="btn btn-small" onclick="editReward('${session.id}')" style="background: #ff9800;">✏️ Sửa tiền</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteReward('${session.id}')">🗑️ Xóa</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
         async function markAsPaid(sessionId) {
     try {
@@ -1620,6 +1626,144 @@ async function giveHotReward() {
     }
 }
 
+// Sửa số tiền thưởng
+async function editReward(sessionId) {
+    const session = sessionHistory.find(s => s.id === sessionId);
+    if (!session) return;
+    
+    const currentReward = session.reward || 0;
+    const newReward = prompt(
+        `Sửa tiền thưởng cho: ${session.subject}\n` +
+        `Số tiền hiện tại: ${currentReward.toLocaleString('vi-VN')}đ\n\n` +
+        `Nhập số tiền mới (hoặc 0 để xóa):`,
+        currentReward
+    );
+    
+    if (newReward === null) return; // User clicked Cancel
+    
+    const amount = parseInt(newReward);
+    if (isNaN(amount) || amount < 0) {
+        alert('❌ Số tiền không hợp lệ!');
+        return;
+    }
+    
+    const reason = prompt(
+        `Lý do thay đổi từ ${currentReward.toLocaleString('vi-VN')}đ → ${amount.toLocaleString('vi-VN')}đ:`,
+        'Điều chỉnh do lỗi hệ thống'
+    );
+    
+    if (!reason || !reason.trim()) {
+        alert('❌ Vui lòng nhập lý do!');
+        return;
+    }
+    
+    if (!confirm(
+        `Xác nhận sửa tiền thưởng?\n\n` +
+        `Bài: ${session.subject}\n` +
+        `Cũ: ${currentReward.toLocaleString('vi-VN')}đ\n` +
+        `Mới: ${amount.toLocaleString('vi-VN')}đ\n` +
+        `Lý do: ${reason}`
+    )) {
+        return;
+    }
+    
+    try {
+        // Cập nhật Firebase
+        await db.collection('sessions').doc(sessionId).update({
+            reward: amount,
+            editHistory: firebase.firestore.FieldValue.arrayUnion({
+                oldReward: currentReward,
+                newReward: amount,
+                reason: reason,
+                editedBy: 'parent',
+                editedAt: new Date().toISOString()
+            })
+        });
+        
+        // Cập nhật local state
+        session.reward = amount;
+        if (!session.editHistory) session.editHistory = [];
+        session.editHistory.push({
+            oldReward: currentReward,
+            newReward: amount,
+            reason: reason,
+            editedBy: 'parent',
+            editedAt: new Date().toISOString()
+        });
+        
+        // Reload
+        await loadData();
+        updateOverview();
+        renderRewards();
+        
+        alert(`✅ Đã cập nhật tiền thưởng!\n${currentReward.toLocaleString('vi-VN')}đ → ${amount.toLocaleString('vi-VN')}đ`);
+        
+    } catch (error) {
+        console.error('Edit reward error:', error);
+        alert('❌ Lỗi: ' + error.message);
+    }
+}
+
+// Xóa bản ghi tiền thưởng
+async function deleteReward(sessionId) {
+    const session = sessionHistory.find(s => s.id === sessionId);
+    if (!session) return;
+    
+    const reason = prompt(
+        `⚠️ XÓA HOÀN TOÀN bản ghi tiền thưởng:\n\n` +
+        `Bài: ${session.subject}\n` +
+        `Ngày: ${new Date(session.date).toLocaleString('vi-VN')}\n` +
+        `Tiền: ${session.reward.toLocaleString('vi-VN')}đ\n\n` +
+        `Nhập lý do xóa:`,
+        'Lỗi hệ thống / Chấm trùng'
+    );
+    
+    if (!reason || !reason.trim()) {
+        alert('❌ Phải nhập lý do xóa!');
+        return;
+    }
+    
+    if (!confirm(
+        `🚨 XÁC NHẬN XÓA VĨNH VIỄN?\n\n` +
+        `Bài: ${session.subject}\n` +
+        `Tiền: ${session.reward.toLocaleString('vi-VN')}đ\n` +
+        `Lý do: ${reason}\n\n` +
+        `⚠️ Hành động này KHÔNG THỂ HOÀN TÁC!`
+    )) {
+        return;
+    }
+    
+    try {
+        // Lưu log xóa trước khi xóa
+        await db.collection('deletedSessions').add({
+            ...session,
+            deletedBy: 'parent',
+            deletedAt: new Date().toISOString(),
+            deleteReason: reason
+        });
+        
+        // Xóa khỏi Firebase
+        await db.collection('sessions').doc(sessionId).delete();
+        
+        // Xóa khỏi local state
+        const index = sessionHistory.findIndex(s => s.id === sessionId);
+        if (index > -1) {
+            sessionHistory.splice(index, 1);
+        }
+        
+        // Reload
+        await loadData();
+        updateOverview();
+        renderRewards();
+        renderSessions();
+        
+        alert(`✅ Đã xóa bản ghi!\n\nLý do: ${reason}\n\n(Đã lưu vào thùng rác để kiểm tra sau)`);
+        
+    } catch (error) {
+        console.error('Delete reward error:', error);
+        alert('❌ Lỗi: ' + error.message);
+    }
+}
     </script>
 <!-- Modal chỉnh sửa/thêm lịch -->
 <div class="modal" id="scheduleModal">
