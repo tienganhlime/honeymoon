@@ -796,7 +796,13 @@ async function loadScheduleFromFirebase() {
     };
 // Thêm biến global
 let ACTIVITIES = [];
-
+let REWARD_SETTINGS = {
+    onTime: 2000,
+    fast: 1000,
+    complete100: 2000,
+    complete90: 1000,
+    examBonus: 1000
+};
 // Load activities từ Firebase
 async function loadActivitiesFromFirebase() {
     try {
@@ -819,7 +825,21 @@ async function loadActivitiesFromFirebase() {
         ACTIVITIES = [];
     }
 }
-
+async function loadRewardSettings() {
+    try {
+        const doc = await db.collection('settings').doc('rewards').get();
+        if (doc.exists) {
+            REWARD_SETTINGS = doc.data();
+            console.log('✅ Đã load cài đặt thưởng từ Firebase:', REWARD_SETTINGS);
+        } else {
+            // Lưu giá trị mặc định lên Firebase lần đầu
+            await db.collection('settings').doc('rewards').set(REWARD_SETTINGS);
+            console.log('ℹ️ Đã tạo cài đặt thưởng mặc định');
+        }
+    } catch (error) {
+        console.error('❌ Load reward settings error:', error);
+    }
+}
 // Render activities vào break modal
 function renderBreakActivities() {
     const container = document.getElementById('breakActivitiesContainer');
@@ -914,6 +934,7 @@ Hãy kiên nhẫn với em nhé!`
     window.onload = async function() {
     await loadScheduleFromFirebase();
     await loadActivitiesFromFirebase();
+await loadRewardSettings();
     displayDate();
     loadSchedule();
     loadProgress();
@@ -1389,30 +1410,30 @@ Hãy kiên nhẫn với em nhé!`
         const minutesTarget = Math.floor(targetTime / 60);
         
         let reward = 0;
-        let rewardReason = [];
-        
-        if (totalTime <= targetTime) {
-            reward += 2000;
-            rewardReason.push('Hoàn thành đúng thời gian: +2,000đ');
-        }
-        
-        if (totalTime <= targetTime * 0.8) {
-            reward += 1000;
-            rewardReason.push('Làm nhanh hơn 20%: +1,000đ');
-        }
-        
-        if (completed === totalQuestions) {
-            reward += 2000;
-            rewardReason.push('Hoàn thành 100%: +2,000đ');
-        } else if (completed >= totalQuestions * 0.9) {
-            reward += 1000;
-            rewardReason.push('Hoàn thành 90%+: +1,000đ');
-        }
-        
-        if (currentSession.mode === 'exam') {
-            reward += 1000;
-            rewardReason.push('Chế độ luyện thi (bonus): +1,000đ');
-        }
+let rewardReason = [];
+
+if (totalTime <= targetTime) {
+    reward += REWARD_SETTINGS.onTime;
+    rewardReason.push(`Hoàn thành đúng thời gian: +${REWARD_SETTINGS.onTime.toLocaleString('vi-VN')}đ`);
+}
+
+if (totalTime <= targetTime * 0.8) {
+    reward += REWARD_SETTINGS.fast;
+    rewardReason.push(`Làm nhanh hơn 20%: +${REWARD_SETTINGS.fast.toLocaleString('vi-VN')}đ`);
+}
+
+if (completed === totalQuestions) {
+    reward += REWARD_SETTINGS.complete100;
+    rewardReason.push(`Hoàn thành 100%: +${REWARD_SETTINGS.complete100.toLocaleString('vi-VN')}đ`);
+} else if (completed >= totalQuestions * 0.9) {
+    reward += REWARD_SETTINGS.complete90;
+    rewardReason.push(`Hoàn thành 90%+: +${REWARD_SETTINGS.complete90.toLocaleString('vi-VN')}đ`);
+}
+
+if (currentSession.mode === 'exam') {
+    reward += REWARD_SETTINGS.examBonus;
+    rewardReason.push(`Chế độ luyện thi (bonus): +${REWARD_SETTINGS.examBonus.toLocaleString('vi-VN')}đ`);
+}
         
         currentSession.reward = reward;
         
