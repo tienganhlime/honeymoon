@@ -1469,17 +1469,18 @@ function openChatAI() {
                 // Convert to base64
                 const fileBase64 = await fileToBase64(file);
                 
-                // Gọi Cloud Function upload
-                const uploadResponse = await fetch(`${FUNCTIONS_URL}/uploadToGDrive`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        fileName: file.name,
-                        fileBase64: fileBase64.split(',')[1], // Bỏ phần "data:...;base64,"
-                        subject: currentSession.subject.subject,
-                        sessionDate: new Date().toISOString()
-                    })
-                });
+               // Gọi Google Apps Script
+const uploadResponse = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        action: 'upload',
+        fileName: file.name,
+        fileBase64: fileBase64.split(',')[1],
+        subject: currentSession.subject.subject,
+        sessionDate: new Date().toISOString()
+    })
+});
                 
                 const uploadData = await uploadResponse.json();
                 
@@ -1531,16 +1532,17 @@ async function gradeAssignment(fileId, fileBase64) {
     try {
         const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
         
-        const gradeResponse = await fetch(`${FUNCTIONS_URL}/gradeAssignment`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                submissionId: fileId,
-                fileBase64: fileBase64,
-                subject: currentSession.subject.subject,
-                totalQuestions: totalQuestions
-            })
-        });
+        const gradeResponse = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        action: 'grade',
+        submissionId: fileId,
+        fileBase64: fileBase64,
+        subject: currentSession.subject.subject,
+        totalQuestions: totalQuestions
+    })
+});
         
         const gradeData = await gradeResponse.json();
         
@@ -1902,8 +1904,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// URL của Firebase Functions (sau khi deploy)
-const FUNCTIONS_URL = 'https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net'; // ⚠️ THAY ĐỔI
+// URL của Google Apps Script
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQgklJRPBeMHRX6x0gyBjEgx_UAMqWLD-OPu39c0pLbVkr7XeFa5RdfyrzH6mhtcXKYg/exec'; // Sẽ có sau khi deploy Apps Script
 
         function logActivity(type, detail) {
             const log = {
