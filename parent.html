@@ -425,6 +425,32 @@
                 grid-template-columns: 1fr;
             }
         }
+.input-group {
+    margin: 15px 0;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+    background: #f9f9f9;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    border-color: #667eea;
+    outline: none;
+}
     </style>
 </head>
 <body>
@@ -441,6 +467,7 @@
                 <button class="tab-btn" onclick="switchTab('schedule')">Thời khóa biểu</button>
                 <button class="tab-btn" onclick="switchTab('rewards')">Tiền thưởng</button>
 <button class="tab-btn" onclick="switchTab('settings')">⚙️ Cài đặt</button>
+<button class="tab-btn" onclick="switchTab('messages')">💬 Tin nhắn với con</button>
             </div>
         </div>
 
@@ -592,6 +619,42 @@
             <button class="btn btn-success" onclick="saveRewardSettings()">💾 Lưu cài đặt</button>
         </div>
     </div>
+<div class="card">
+    <h2>⚙️ Cài đặt hoạt động ra chơi</h2>
+    <p style="color: #666; margin-bottom: 20px;">Thêm/sửa/xóa gợi ý hoạt động cho con trong giờ nghỉ</p>
+    <div id="activitiesList" style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;"></div>
+    <button class="btn btn-success" onclick="addActivity()">+ Thêm hoạt động mới</button>
+</div>
+
+<!-- Modal chỉnh sửa/thêm hoạt động -->
+<div class="modal" id="activityModal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeActivityModal()">&times;</button>
+        <h2 id="activityModalTitle" style="color: #667eea; margin-bottom: 20px;">Thêm Hoạt động</h2>
+        <form id="activityForm">
+            <div class="input-group">
+                <label>Tên hoạt động (ví dụ: Nhảy theo nhạc):</label>
+                <input type="text" id="activityName" required>
+            </div>
+            <div class="input-group">
+                <label>Icon (emoji, ví dụ: 💃):</label>
+                <input type="text" id="activityIcon" required>
+            </div>
+            <input type="hidden" id="activityIndex"> <!-- Ẩn: lưu index nếu edit -->
+            <button type="submit" class="btn btn-success" style="width: 100%;">💾 Lưu</button>
+        </form>
+    </div>
+</div>
+</div>
+<div id="tab-messages" class="tab-content">
+    <div class="card">
+        <h2>💬 Tin nhắn với con</h2>
+        <div id="parentMessagesList" style="max-height: 500px; overflow-y: auto; margin-bottom: 20px;"></div>
+        <div style="background: #f0f4ff; padding: 15px; border-radius: 10px;">
+            <textarea id="parentMessageInput" placeholder="Nhắn gì cho con..." style="width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid #667eea;"></textarea>
+            <button class="btn btn-success" onclick="sendParentMessage()" style="margin-top: 10px; width: 100%;">Gửi tin nhắn</button>
+        </div>
+    </div>
 </div>
 
     <!-- Modal chi tiết session -->
@@ -668,6 +731,12 @@
                 {time: '20h05-21h', subject: 'Chữa bài các môn Toán', type: 'homework'}
             ]
         };
+let ACTIVITIES = [
+    { name: 'Youtube (nhảy, hát, ted talk, podcast...', icon: '💃' },
+    { name: 'Chạy cầu thang', icon: '🏃' },
+    { name: 'Bôi kem cho bà', icon: '🤗' },
+    { name: 'Uống nước', icon: '💧' }
+];
 
 const firebaseConfig = {
   apiKey: "AIzaSyBv5qOVgNajnOKoz-vaIYENSWZY2jB8N30",
@@ -1146,29 +1215,44 @@ const db = firebase.firestore();
         }
 
         function editScheduleItem(day, index) {
+    const modal = document.getElementById('scheduleModal');
+    const title = document.getElementById('modalTitle');
+    const form = document.getElementById('scheduleForm');
+    
     const item = SCHEDULE[day][index];
     
-    const newTime = prompt('Thời gian:', item.time);
-    if (!newTime) return;
+    title.textContent = 'Chỉnh sửa Môn học';
+    document.getElementById('editTime').value = item.time;
+    document.getElementById('editSubject').value = item.subject;
+    document.getElementById('editType').value = item.type;
+    document.getElementById('editDay').value = day;
+    document.getElementById('editIndex').value = index;
     
-    const newSubject = prompt('Môn học:', item.subject);
-    if (!newSubject) return;
+    modal.classList.add('active');
     
-    const newType = prompt('Loại (homework/class/break):', item.type);
-    if (!newType) return;
-    
-    // Cập nhật
-    SCHEDULE[day][index] = {
-        ...item,
-        time: newTime,
-        subject: newSubject,
-        type: newType
+    // Xử lý submit form
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        const newTime = document.getElementById('editTime').value;
+        const newSubject = document.getElementById('editSubject').value;
+        const newType = document.getElementById('editType').value;
+        
+        if (!newTime || !newSubject || !newType) {
+            alert('Vui lòng điền đầy đủ thông tin!');
+            return;
+        }
+        
+        SCHEDULE[day][index] = {
+            time: newTime,
+            subject: newSubject,
+            type: newType
+        };
+        
+        saveScheduleToFirebase(); // Lưu lên Firebase
+        renderSchedule(); // Reload lịch
+        closeScheduleModal();
+        alert('Đã cập nhật!');
     };
-    
-    // Lưu lên Firebase
-    saveScheduleToFirebase();
-    renderSchedule();
-    alert('Đã cập nhật!');
 }
 
 async function saveScheduleToFirebase() {
@@ -1187,9 +1271,44 @@ async function saveScheduleToFirebase() {
             }
         }
 
-        function addScheduleItem(day) {
-            alert('Tính năng thêm môn học sẽ được cập nhật trong phiên bản tiếp theo!');
+       function addScheduleItem(day) {
+    const modal = document.getElementById('scheduleModal');
+    const title = document.getElementById('modalTitle');
+    const form = document.getElementById('scheduleForm');
+    
+    title.textContent = 'Thêm Môn học mới';
+    document.getElementById('editTime').value = '';
+    document.getElementById('editSubject').value = '';
+    document.getElementById('editType').value = 'homework';
+    document.getElementById('editDay').value = day;
+    document.getElementById('editIndex').value = ''; // Không có index vì là add mới
+    
+    modal.classList.add('active');
+    
+    // Xử lý submit form
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        const newTime = document.getElementById('editTime').value;
+        const newSubject = document.getElementById('editSubject').value;
+        const newType = document.getElementById('editType').value;
+        
+        if (!newTime || !newSubject || !newType) {
+            alert('Vui lòng điền đầy đủ thông tin!');
+            return;
         }
+        
+        SCHEDULE[day].push({
+            time: newTime,
+            subject: newSubject,
+            type: newType
+        });
+        
+        saveScheduleToFirebase(); // Lưu lên Firebase
+        renderSchedule(); // Reload lịch
+        closeScheduleModal();
+        alert('Đã thêm!');
+    };
+}
 
         function renderRewards() {
             // Calculate rewards
@@ -1283,6 +1402,200 @@ async function saveRewardSettings() {
         alert('Lỗi: ' + error.message);
     }
 }
+
+function closeScheduleModal() {
+    document.getElementById('scheduleModal').classList.remove('active');
+}
+
+// Load activities từ Firebase khi load page
+async function loadActivities() {
+    try {
+        const doc = await db.collection('settings').doc('activities').get();
+        if (doc.exists) {
+            ACTIVITIES = doc.data().activities || ACTIVITIES;
+        }
+        renderActivities();
+    } catch (error) {
+        console.error('Load activities error:', error);
+    }
+}
+
+// Render danh sách activities
+function renderActivities() {
+    const container = document.getElementById('activitiesList');
+    container.innerHTML = ACTIVITIES.map((act, idx) => `
+        <div class="schedule-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div>
+                <strong>${act.icon}</strong> ${act.name}
+            </div>
+            <div>
+                <button class="btn btn-small" onclick="editActivity(${idx})">Sửa</button>
+                <button class="btn btn-small btn-danger" onclick="deleteActivity(${idx})">Xóa</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Thêm hoạt động mới
+function addActivity() {
+    const modal = document.getElementById('activityModal');
+    const title = document.getElementById('activityModalTitle');
+    const form = document.getElementById('activityForm');
+    
+    title.textContent = 'Thêm Hoạt động mới';
+    document.getElementById('activityName').value = '';
+    document.getElementById('activityIcon').value = '';
+    document.getElementById('activityIndex').value = '';
+    
+    modal.classList.add('active');
+    
+    form.onsubmit = handleActivitySubmit;
+}
+
+// Chỉnh sửa hoạt động
+function editActivity(index) {
+    const modal = document.getElementById('activityModal');
+    const title = document.getElementById('activityModalTitle');
+    const form = document.getElementById('activityForm');
+    
+    title.textContent = 'Chỉnh sửa Hoạt động';
+    document.getElementById('activityName').value = ACTIVITIES[index].name;
+    document.getElementById('activityIcon').value = ACTIVITIES[index].icon;
+    document.getElementById('activityIndex').value = index;
+    
+    modal.classList.add('active');
+    
+    form.onsubmit = handleActivitySubmit;
+}
+
+// Xử lý submit form hoạt động
+async function handleActivitySubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('activityName').value;
+    const icon = document.getElementById('activityIcon').value;
+    const index = document.getElementById('activityIndex').value;
+    
+    if (!name || !icon) {
+        alert('Vui lòng điền đầy đủ!');
+        return;
+    }
+    
+    if (index === '') {
+        // Add new
+        ACTIVITIES.push({ name, icon });
+    } else {
+        // Edit
+        ACTIVITIES[index] = { name, icon };
+    }
+    
+    try {
+        await db.collection('settings').doc('activities').set({ activities: ACTIVITIES });
+        renderActivities();
+        closeActivityModal();
+        alert('Đã lưu!');
+    } catch (error) {
+        console.error('Save activities error:', error);
+        alert('Lỗi lưu: ' + error.message);
+    }
+}
+
+// Xóa hoạt động
+async function deleteActivity(index) {
+    if (confirm('Xóa hoạt động này?')) {
+        ACTIVITIES.splice(index, 1);
+        try {
+            await db.collection('settings').doc('activities').set({ activities: ACTIVITIES });
+            renderActivities();
+            alert('Đã xóa!');
+        } catch (error) {
+            console.error('Delete error:', error);
+        }
+    }
+}
+
+// Close modal hoạt động
+function closeActivityModal() {
+    document.getElementById('activityModal').classList.remove('active');
+}
+async function loadParentMessages() {
+    const snap = await db.collection('messages').orderBy('timestamp', 'desc').get();
+    const list = document.getElementById('parentMessagesList');
+    list.innerHTML = snap.docs.map(doc => {
+        const m = doc.data();
+        const time = new Date(m.timestamp).toLocaleString('vi-VN');
+        const isParent = m.from === 'parent';
+        return `
+            <div style="margin-bottom: 15px; text-align: ${isParent ? 'right' : 'left'};">
+                <div style="display: inline-block; max-width: 80%; background: ${isParent ? '#667eea' : '#e3f2fd'}; color: ${isParent ? 'white' : '#333'}; padding: 12px 18px; border-radius: 18px;">
+                    <small style="opacity: 0.8;">${isParent ? 'Bố mẹ' : 'Con'} - ${time}</small><br>
+                    ${m.text}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function sendParentMessage() {
+    const text = document.getElementById('parentMessageInput').value.trim();
+    if (!text) return;
+    
+    await db.collection('messages').add({
+        text: text,
+        from: 'parent',
+        timestamp: new Date().toISOString()
+    });
+    document.getElementById('parentMessageInput').value = '';
+    loadParentMessages();
+}
+
+// Gọi khi mở tab
+function switchTab(tab) {
+    // Ẩn hết tab + bỏ active button
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    // Hiện tab được chọn
+    document.getElementById('tab-' + tab).classList.add('active');
+    event.target.classList.add('active');
+
+    // GỌI HÀM LOAD TƯƠNG ỨNG
+    if (tab === 'overview') renderOverview();
+    if (tab === 'sessions') renderSessions();
+    if (tab === 'stats') renderStats();
+    if (tab === 'schedule') renderSchedule();
+    if (tab === 'rewards') renderRewards();
+    if (tab === 'settings') renderSettings(); // nếu có
+    if (tab === 'messages') loadParentMessages();   // ← DÒNG QUAN TRỌNG NHẤT
+}
+
     </script>
+<!-- Modal chỉnh sửa/thêm lịch -->
+<div class="modal" id="scheduleModal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeScheduleModal()">&times;</button>
+        <h2 id="modalTitle" style="color: #667eea; margin-bottom: 20px;">Chỉnh sửa Môn học</h2>
+        <form id="scheduleForm">
+            <div class="input-group">
+                <label>Thời gian (ví dụ: 16h30-17h15):</label>
+                <input type="text" id="editTime" required>
+            </div>
+            <div class="input-group">
+                <label>Tên môn học:</label>
+                <input type="text" id="editSubject" required>
+            </div>
+            <div class="input-group">
+                <label>Loại:</label>
+                <select id="editType" required>
+                    <option value="homework">📝 Bài tập</option>
+                    <option value="class">🏫 Lớp học</option>
+                    <option value="break">☕ Nghỉ ngơi</option>
+                </select>
+            </div>
+            <input type="hidden" id="editDay"> <!-- Ẩn: lưu ngày -->
+            <input type="hidden" id="editIndex"> <!-- Ẩn: lưu index nếu edit -->
+            <button type="submit" class="btn btn-success" style="width: 100%;">💾 Lưu thay đổi</button>
+        </form>
+    </div>
+</div>
 </body>
 </html>
