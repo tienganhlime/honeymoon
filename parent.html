@@ -585,6 +585,24 @@
                 </div>
             </div>
 
+              <div class="card">
+                <h2>🎁 Thưởng nóng cho con</h2>
+                <p style="color: #666; margin-bottom: 20px;">Thưởng thêm cho con khi làm tốt hoặc vượt chỉ tiêu</p>
+                <div style="background: #f8f9ff; padding: 25px; border-radius: 15px;">
+                    <div class="input-group">
+                        <label>Số tiền thưởng:</label>
+                        <input type="number" id="hotRewardAmount" placeholder="Ví dụ: 5000" style="font-size: 1.2em; padding: 15px;">
+                    </div>
+                    <div class="input-group">
+                        <label>Lý do thưởng:</label>
+                        <textarea id="hotRewardReason" placeholder="Ví dụ: Làm thêm 10 bài toán nâng cao, học chủ động..." style="height: 80px; font-size: 1.1em; padding: 15px;"></textarea>
+                    </div>
+                    <button class="btn btn-success" onclick="giveHotReward()" style="width: 100%; padding: 18px; font-size: 1.3em; background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
+                        🎁 Tặng thưởng ngay
+                    </button>
+                </div>
+            </div>
+
             <div class="card">
                 <h2>💸 Lịch sử tiền thưởng</h2>
                 <div id="rewardHistory"></div>
@@ -1530,7 +1548,7 @@ function switchTab(tab) {
     document.getElementById('tab-' + tab).classList.add('active');
     event.target.classList.add('active');
 
-    // GỌI HÀM LOAD TƯƠNG ỨNG
+    // GỌI HÀM LOAD TƯƠNG ỨNGlích
     if (tab === 'overview') renderOverview();
     if (tab === 'sessions') renderSessions();
     if (tab === 'stats') renderStats();
@@ -1538,6 +1556,68 @@ function switchTab(tab) {
     if (tab === 'rewards') renderRewards();
     if (tab === 'settings') loadRewardSettingsToForm();
     if (tab === 'messages') loadParentMessages();   // ← DÒNG QUAN TRỌNG NHẤT
+}
+
+async function giveHotReward() {
+    const amount = parseInt(document.getElementById('hotRewardAmount').value);
+    const reason = document.getElementById('hotRewardReason').value.trim();
+    
+    if (!amount || amount <= 0) {
+        alert('❌ Vui lòng nhập số tiền hợp lệ!');
+        return;
+    }
+    
+    if (!reason) {
+        alert('❌ Vui lòng nhập lý do thưởng!');
+        return;
+    }
+    
+    if (!confirm(`Xác nhận tặng ${amount.toLocaleString('vi-VN')}đ cho con?\nLý do: ${reason}`)) {
+        return;
+    }
+    
+    try {
+        // Tạo session thưởng nóng
+        const hotRewardSession = {
+            id: 'hotreward_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            date: new Date().toISOString(),
+            subject: '🎁 Thưởng nóng từ ba mẹ',
+            mode: 'hot_reward',
+            time: 0,
+            targetTime: 0,
+            completionRate: 100,
+            reward: amount,
+            questions: [],
+            aiChatCount: 0,
+            callParentCount: 0,
+            callParentLogs: [],
+            feedback: reason,
+            paid: false,
+            paidDate: null,
+            submittedFiles: null
+        };
+        
+        // Lưu lên Firebase
+        await db.collection('sessions').add(hotRewardSession);
+        
+        // Cập nhật local state
+        sessionHistory.unshift(hotRewardSession);
+        
+        // Reset form
+        document.getElementById('hotRewardAmount').value = '';
+        document.getElementById('hotRewardReason').value = '';
+        
+        // Reload các phần liên quan
+        await loadData();
+        updateOverview();
+        renderRewards();
+        
+        alert(`✅ Đã tặng thưởng ${amount.toLocaleString('vi-VN')}đ cho con!\n\nCon sẽ thấy ngay trên màn hình của mình! 🎉`);
+        
+    } catch (error) {
+        console.error('Hot reward error:', error);
+        alert('❌ Lỗi: ' + error.message);
+    }
 }
 
     </script>
