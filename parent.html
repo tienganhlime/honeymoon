@@ -672,71 +672,25 @@
         let completedSubjects = [];
         let currentFilter = 'all';
 
-        const SCHEDULE = {
-            'Monday': [
-                {time: '16h30-17h15', subject: 'Yên Hòa HW', type: 'homework'},
-                {time: '17h20-19h00', subject: 'Maths cô Hải', type: 'homework'},
-                {time: '19h30-20h00', subject: 'Eat + Shower', type: 'break'},
-                {time: '20h-21h30', subject: 'FCE online', type: 'homework'},
-                {time: '21h30-22h', subject: 'Yên Hòa HW', type: 'homework'}
-            ],
-            'Tuesday': [
-                {time: '16h30-17h30', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework'},
-                {time: '17h30-18h', subject: 'Eat', type: 'break'},
-                {time: '18h-20h', subject: 'Speaking Class (LIME)', type: 'class'},
-                {time: '20h30-21h30', subject: 'Go home + Shower', type: 'break'},
-                {time: '21h30-22h', subject: 'FCE online HW / chữa bài sai', type: 'homework'}
-            ],
-            'Wednesday': [
-                {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework'},
-                {time: '18h-19h', subject: 'Eat + Shower', type: 'break'},
-                {time: '19h-20h30', subject: 'Maths cô Hải HW (2.5h)', type: 'homework'},
-                {time: '20h35-21h35', subject: 'FCE offline HW / chữa bài sai', type: 'homework'},
-                {time: '21h30-22h', subject: 'FCE Speaking HW / extra', type: 'homework'}
-            ],
-            'Thursday': [
-                {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework'},
-                {time: '18h-19h', subject: 'Eat + Shower', type: 'break'},
-                {time: '19h-19h45', subject: 'FCE offline HW / chữa bài sai', type: 'homework'},
-                {time: '20h-21h', subject: 'FCE Online Class', type: 'class'},
-                {time: '21h35-22h', subject: 'FCE offline HW / chữa bài sai', type: 'homework'}
-            ],
-            'Friday': [
-                {time: '16h30-17h30', subject: 'Math HW cô Hải', type: 'homework'},
-                {time: '17h30-18h', subject: 'Eat', type: 'break'},
-                {time: '18h-20h30', subject: 'FCE Offline Class', type: 'class'},
-                {time: '21h30-22h', subject: 'Shower + Free time', type: 'break'}
-            ],
-            'Saturday': [
-                {time: '9h-12h', subject: 'Math HW cô Hải', type: 'homework'},
-                {time: '12h-14h30', subject: 'FCE online HW / chữa bài sai', type: 'homework'},
-                {time: '12h20-14h30', subject: 'Eat + Sleep', type: 'break'},
-                {time: '14h40-15h40', subject: 'FCE online HW / chữa bài sai', type: 'homework'},
-                {time: '15h45-16h45', subject: 'FCE Speaking HW', type: 'homework'},
-                {time: '16h50-19h', subject: 'Kick boxing', type: 'class'},
-                {time: '17h35-18h15', subject: 'Chuẩn bị bài Speaking Club', type: 'homework'},
-                {time: '19h-21h', subject: 'Speech Class', type: 'class'},
-                {time: '21h-22h', subject: 'Shower + Free time', type: 'break'}
-            ],
-            'Sunday': [
-                {time: '9h-10h', subject: 'Ukulele', type: 'homework'},
-                {time: '10h30-11h30', subject: 'Speaking Club', type: 'class'},
-                {time: '12h-13h30', subject: 'Math cô Hải', type: 'homework'},
-                {time: '13h30-15h', subject: 'Eat + Sleep', type: 'break'},
-                {time: '15h-16h', subject: 'FCE HW', type: 'homework'},
-                {time: '16-17h', subject: 'FCE HW', type: 'homework'},
-                {time: '17h05-18h', subject: 'Eat + Shower', type: 'break'},
-                {time: '18h-19h', subject: 'Yên Hòa HW', type: 'homework'},
-                {time: '19h-20h', subject: 'Yên Hòa HW', type: 'homework'},
-                {time: '20h05-21h', subject: 'Chữa bài các môn Toán', type: 'homework'}
-            ]
-        };
-let ACTIVITIES = [
-    { name: 'Youtube (nhảy, hát, ted talk, podcast...', icon: '💃' },
-    { name: 'Chạy cầu thang', icon: '🏃' },
-    { name: 'Bôi kem cho bà', icon: '🤗' },
-    { name: 'Uống nước', icon: '💧' }
-];
+let SCHEDULE = {};
+
+async function loadScheduleFromFirebase() {
+    try {
+        const doc = await db.collection('settings').doc('schedule').get();
+        if (doc.exists && doc.data().schedule) {
+            SCHEDULE = doc.data().schedule;
+            console.log('✅ Đã load schedule từ Firebase');
+        } else {
+            SCHEDULE = {};
+        }
+    } catch (error) {
+        console.error('❌ Load schedule error:', error);
+        SCHEDULE = {};
+    }
+}
+
+let ACTIVITIES = [];
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyBv5qOVgNajnOKoz-vaIYENSWZY2jB8N30",
@@ -751,7 +705,9 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
         window.onload = async function() {
-    await loadData(); // Đợi load xong
+await loadScheduleFromFirebase();   
+ await loadActivities();
+ await loadData(); // Đợi load xong
     displayCurrentDate();
     updateOverview();
     displayRecentActivities();

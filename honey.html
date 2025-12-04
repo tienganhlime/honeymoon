@@ -741,24 +741,9 @@
             <h2 style="color: #667eea; margin-bottom: 20px;">☕ Nghỉ giải lao</h2>
             <div class="timer-display" id="breakTimer">05:00</div>
             <p style="text-align: center; color: #666; margin-bottom: 20px;">Chọn hoạt động giải trí:</p>
-            <div class="break-activities">
-                <div class="activity-card" onclick="selectActivity('Nhảy theo nhạc')">
-                    <div class="icon">💃</div>
-                    <div>Nhảy theo nhạc</div>
-                </div>
-                <div class="activity-card" onclick="selectActivity('Chạy cầu thang')">
-                    <div class="icon">🏃</div>
-                    <div>Chạy cầu thang</div>
-                </div>
-                <div class="activity-card" onclick="selectActivity('Bôi kem cho bố')">
-                    <div class="icon">🤗</div>
-                    <div>Bôi kem cho bố</div>
-                </div>
-                <div class="activity-card" onclick="selectActivity('Uống nước')">
-                    <div class="icon">💧</div>
-                    <div>Uống nước</div>
-                </div>
-            </div>
+            <div class="break-activities" id="breakActivitiesContainer">
+    <!-- Sẽ được load động từ Firebase -->
+</div>
             <button class="btn btn-secondary" onclick="skipBreak()" style="width: 100%; margin-top: 20px;">Bỏ qua nghỉ</button>
         </div>
     </div>
@@ -781,68 +766,25 @@
 
 <script>
     // Schedule data
-    const SCHEDULE = {
-        'Monday': [
-            {time: '16h30-17h15', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true},
-            {time: '17h20-19h00', subject: 'Maths cô Hải', type: 'homework', requireSubmit: true},
-            {time: '19h30-20h00', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
-            {time: '20h-21h30', subject: 'FCE online', type: 'homework', requireSubmit: true},
-            {time: '21h30-22h', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true}
-        ],
-        'Tuesday': [
-            {time: '16h30-17h30', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework', requireSubmit: true},
-            {time: '17h30-18h', subject: 'Eat', type: 'break', requireSubmit: false},
-            {time: '18h-20h', subject: 'Speaking Class (LIME)', type: 'class', requireSubmit: false, note: 'Nhớ mang sách và vở'},
-            {time: '20h30-21h30', subject: 'Go home + Shower', type: 'break', requireSubmit: false},
-            {time: '21h30-22h', subject: 'FCE online HW / chữa bài sai', type: 'homework', requireSubmit: true}
-        ],
-        'Wednesday': [
-            {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework', requireSubmit: true},
-            {time: '18h-19h', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
-            {time: '19h-20h30', subject: 'Maths cô Hải HW (2.5h)', type: 'homework', requireSubmit: true},
-            {time: '20h35-21h35', subject: 'FCE offline HW / chữa bài sai', type: 'homework', requireSubmit: true},
-            {time: '21h30-22h', subject: 'FCE Speaking HW / extra', type: 'homework', requireSubmit: true}
-        ],
-        'Thursday': [
-            {time: '17h-18h', subject: 'Yên Hòa HW + FCE extra speaking', type: 'homework', requireSubmit: true},
-            {time: '18h-19h', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
-            {time: '19h-19h45', subject: 'FCE offline HW / chữa bài sai', type: 'homework', requireSubmit: true},
-            {time: '20h-21h', subject: 'FCE Online Class', type: 'class', requireSubmit: false, note: 'Nhớ mang sách FCE'},
-            {time: '21h35-22h', subject: 'FCE offline HW / chữa bài sai', type: 'homework', requireSubmit: true}
-        ],
-        'Friday': [
-            {time: '16h30-17h30', subject: 'Math HW cô Hải', type: 'homework', requireSubmit: true},
-            {time: '17h30-18h', subject: 'Eat', type: 'break', requireSubmit: false},
-            {time: '18h-20h30', subject: 'FCE Offline Class', type: 'class', requireSubmit: false, note: 'Nhớ mang sách FCE'},
-            {time: '21h30-22h', subject: 'Shower + Free time', type: 'break', requireSubmit: false}
-        ],
-        'Saturday': [
-            {time: '9h-12h', subject: 'Math HW cô Hải', type: 'homework', requireSubmit: true},
-            {time: '12h-14h30', subject: 'FCE online HW / chữa bài sai', type: 'homework', requireSubmit: true},
-            {time: '12h20-14h30', subject: 'Eat + Sleep', type: 'break', requireSubmit: false},
-            {time: '14h40-15h40', subject: 'FCE online HW / chữa bài sai', type: 'homework', requireSubmit: true},
-            {time: '15h45-16h45', subject: 'FCE Speaking HW', type: 'homework', requireSubmit: true},
-            {time: '16h50-19h', subject: 'Kick boxing', type: 'class', requireSubmit: false, note: 'Mang đồ tập'},
-            {time: '17h35-18h15', subject: 'Chuẩn bị bài Speaking Club', type: 'homework', requireSubmit: false},
-            {time: '19h-21h', subject: 'Speech Class', type: 'class', requireSubmit: false},
-            {time: '21h-22h', subject: 'Shower + Free time', type: 'break', requireSubmit: false}
-        ],
-        'Sunday': [
-            {time: '7h15', subject: 'Wake up', type: 'break', requireSubmit: false},
-            {time: '8h-8h15', subject: 'Eat breakfast', type: 'break', requireSubmit: false},
-            {time: '9h-10h', subject: 'Ukulele', type: 'homework', requireSubmit: false},
-            {time: '10h30-11h30', subject: 'Speaking Club', type: 'class', requireSubmit: false},
-            {time: '12h-13h30', subject: 'Math cô Hải', type: 'homework', requireSubmit: true},
-            {time: '13h30-15h', subject: 'Eat + Sleep', type: 'break', requireSubmit: false},
-            {time: '15h-16h', subject: 'FCE HW (cả lớp onl và lớp Off) Chữa và Hoàn thành bài mới', type: 'homework', requireSubmit: true},
-            {time: '16-17h', subject: 'FCE HW (cả lớp onl và lớp Off) Chữa và Hoàn thành bài mới', type: 'homework', requireSubmit: true},
-            {time: '17h05-18h', subject: 'Eat + Shower', type: 'break', requireSubmit: false},
-            {time: '18h-19h', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true},
-            {time: '19h-20h', subject: 'Yên Hòa HW', type: 'homework', requireSubmit: true},
-            {time: '20h05-21h', subject: 'Chữa bài các môn Toán / hoàn thành BTVN các môn Toán', type: 'homework', requireSubmit: true},
-            {time: '21h-22h', subject: 'Đấu trường Gia Đình', type: 'break', requireSubmit: false}
-        ]
-    };
+    // Schedule data - SẼ LOAD TỪ FIREBASE
+let SCHEDULE = {};
+
+// Load schedule từ Firebase
+async function loadScheduleFromFirebase() {
+    try {
+        const doc = await db.collection('settings').doc('schedule').get();
+        if (doc.exists && doc.data().schedule) {
+            SCHEDULE = doc.data().schedule;
+            console.log('✅ Đã load schedule từ Firebase');
+        } else {
+            console.log('⚠️ Chưa có schedule trên Firebase');
+            SCHEDULE = {}; // Để trống, hoặc có thể set default
+        }
+    } catch (error) {
+        console.error('❌ Load schedule error:', error);
+        SCHEDULE = {};
+    }
+}
 
     // Form templates
     const FORM_TEMPLATES = {
@@ -852,6 +794,44 @@
         'FCE Speaking': {parts: 4, questions: [1,1,1,1]},
         'Toán cô Hải - Chữa đề': {parts: 1, questions: [15]}
     };
+// Thêm biến global
+let ACTIVITIES = [];
+
+// Load activities từ Firebase
+async function loadActivitiesFromFirebase() {
+    try {
+        const doc = await db.collection('settings').doc('activities').get();
+        if (doc.exists && doc.data().activities) {
+            ACTIVITIES = doc.data().activities;
+            console.log('✅ Đã load activities từ Firebase');
+        } else {
+            // Default nếu chưa có
+            ACTIVITIES = [
+                { name: 'Nhảy theo nhạc', icon: '💃' },
+                { name: 'Chạy cầu thang', icon: '🏃' },
+                { name: 'Bôi kem cho bố', icon: '🤗' },
+                { name: 'Uống nước', icon: '💧' }
+            ];
+            console.log('⚠️ Dùng activities mặc định');
+        }
+    } catch (error) {
+        console.error('❌ Load activities error:', error);
+        ACTIVITIES = [];
+    }
+}
+
+// Render activities vào break modal
+function renderBreakActivities() {
+    const container = document.getElementById('breakActivitiesContainer');
+    if (!container) return;
+    
+    container.innerHTML = ACTIVITIES.map(act => `
+        <div class="activity-card" onclick="selectActivity('${act.name}')">
+            <div class="icon">${act.icon}</div>
+            <div>${act.name}</div>
+        </div>
+    `).join('');
+}
 
     // AI Prompts
     const AI_PROMPTS = {
@@ -931,11 +911,13 @@ Hãy kiên nhẫn với em nhé!`
     let breakWarningTimeout = null;
 
     // Initialize
-    window.onload = function() {
-        displayDate();
-        loadSchedule();
-        loadProgress();
-    };
+    window.onload = async function() {
+    await loadScheduleFromFirebase();
+    await loadActivitiesFromFirebase();
+    displayDate();
+    loadSchedule();
+    loadProgress();
+};
 
     function displayDate() {
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1302,7 +1284,7 @@ Hãy kiên nhẫn với em nhé!`
         const seconds = elapsed % 60;
         
         const display = document.getElementById('timerDisplay');
-        display.textContent = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        display.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
         if (elapsed > currentSession.targetTime) {
             display.classList.add('danger');
@@ -1796,6 +1778,7 @@ Hãy kiên nhẫn với em nhé!`
         const title = modal.querySelector('h2');
         title.textContent = `☕ Nghỉ giải lao (${breakMinutes} phút)`;
         modal.classList.add('active');
+ renderBreakActivities(); 
         startBreakTimer(breakMinutes * 60);
     }
 
