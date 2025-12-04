@@ -736,12 +736,22 @@ await loadScheduleFromFirebase();
     renderRewards();
 };
 
-        async function loadData() {
+      async function loadData() {
     try {
         // Đọc sessionHistory từ Firebase
-        const sessionsSnapshot = await db.collection('sessions').orderBy('date', 'desc').get();
-        sessionHistory = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
+        const sessionsSnapshot = await db.collection('sessions')
+            .orderBy('date', 'desc')
+            .get();
+
+        // ÉP FIRESTORE KHÔNG DÙNG CACHE CŨ (quan trọng nhất!)
+        const freshData = sessionsSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(session => {
+                // Nếu có field "deleted: true" thì bỏ qua luôn (tùy chọn thêm)
+                return !session.deleted;
+            });
+
+        sessionHistory = freshData;
         // Đọc activityLogs
         const logsSnapshot = await db.collection('activityLogs').orderBy('timestamp', 'desc').limit(100).get();
         activityLogs = logsSnapshot.docs.map(doc => doc.data());
@@ -1303,7 +1313,8 @@ async function saveScheduleToFirebase() {
 
     // Render history
     const container = document.getElementById('rewardHistory');
-    const rewardSessions = sessionHistory.filter(s => s.reward && s.reward > 0).reverse();
+   // Hiện cả thưởng lẫn phạt (chỉ cần có reward ≠ 0)
+const rewardSessions = sessionHistory.filter(s => s.reward !== undefined && s.reward !== 0 && s.reward !== null).reverse();
 
     if (rewardSessions.length === 0) {
         container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Chưa có lịch sử thưởng.</p>';
@@ -1316,13 +1327,17 @@ async function saveScheduleToFirebase() {
         return `
             <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div>
-                        <strong>${session.subject}</strong><br>
-                        <small style="color: #666;">${date} ${time}</small>
-                        ${session.feedback ? `<br><small style="color: #888; font-style: italic;">"${session.feedback.substring(0, 100)}..."</small>` : ''}
-                    </div>
-                    <div class="reward-badge">${session.reward.toLocaleString('vi-VN')}đ</div>
-                </div>
+    <div>
+        <strong>${session.subject}</strong>
+        ${session.reward < 0 ? ' <span style="color:#f44336; font-weight:bold; font-size:1.1em;">← PHẠT</span>' : ''}<br>
+        <small style="color: #666;">${date} ${time}</small>
+        ${session.feedback ? `<br><small style="color: #888; font-style: italic;">"${session.feedback.substring(0, 100)}..."</small>` : ''}
+    </div>
+    <div class="reward-badge" style="background: ${session.reward < 0 ? '#f44336' : 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)'}; color:white;">
+        ${session.reward < 0 ? '-' : ''}${Math.abs(session.reward).toLocaleString('vi-VN')}đ
+    </div>
+</div>
+
                 <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
                     ${session.paid ? 
                         '<div style="color: #4caf50; font-size: 0.9em;">✅ Đã trả</div>' : 
@@ -1565,64 +1580,58 @@ function switchTab(tab) {
 }
 
 async function giveHotReward() {
-    const amount = parseInt(document.getElementById('hotRewardAmount').value);
+    const input = document.getElementById('hotRewardAmount').value.trim();
     const reason = document.getElementById('hotRewardReason').value.trim();
     
-    if (!amount || amount <= 0) {
-        alert('❌ Vui lòng nhập số tiền hợp lệ!');
-        return;
+    if (!input) return alert('Vui lòng nhập số tiền!');
+    const amount = parseInt(input);
+    if (isNaN(amount) || amount === 0) return alert('Vui lòng nhập số hợp lệ (có thể âm để trừ tiền)');
+    if (!reason) return alert('Vui lòng nhập lý do!');
+
+    if (amount < 0) {
+        if (!confirm(`CẢNH BÁO: Bạn đang TRỪ ${Math.abs(amount).toLocaleString()}đ khỏi tài khoản con!\n\nLý do: ${reason}\n\nChắc chắn chứ?`))
+            return;
+    } else {
+        if (!confirm(`Xác nhận tặng ${amount.toLocaleString()}đ cho con?\nLý do: ${reason}`)) return;
     }
-    
-    if (!reason) {
-        alert('❌ Vui lòng nhập lý do thưởng!');
-        return;
-    }
-    
-    if (!confirm(`Xác nhận tặng ${amount.toLocaleString('vi-VN')}đ cho con?\nLý do: ${reason}`)) {
-        return;
-    }
-    
+
     try {
-        // Tạo session thưởng nóng
-        const hotRewardSession = {
-            id: 'hotreward_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        const payload = {
             date: new Date().toISOString(),
-            subject: '🎁 Thưởng nóng từ ba mẹ',
+            subject: amount >= 0 ? 'Thưởng nóng từ ba mẹ ❤️' : 'Phạt tiền từ ba mẹ ⚡',
             mode: 'hot_reward',
-            time: 0,
-            targetTime: 0,
-            completionRate: 100,
             reward: amount,
-            questions: [],
-            aiChatCount: 0,
-            callParentCount: 0,
-            callParentLogs: [],
             feedback: reason,
             paid: false,
-            paidDate: null,
-            submittedFiles: null
+            isPunishment: amount < 0
         };
-        
-        // Lưu lên Firebase
-        await db.collection('sessions').add(hotRewardSession);
-        
-        // Cập nhật local state
-        sessionHistory.unshift(hotRewardSession);
-        
+
+        // ← QUAN TRỌNG: Dùng .add() để Firestore tự sinh ID thật
+        const docRef = await db.collection('sessions').add(payload);
+
+        // Lấy lại document vừa tạo kèm ID đúng
+        const realDoc = await docRef.get();
+        const realData = { id: realDoc.id, ...realDoc.data() };
+
+        // Đẩy vào đầu lịch sử (đảm bảo hiển thị ngay)
+        sessionHistory.unshift(realData);
+
         // Reset form
         document.getElementById('hotRewardAmount').value = '';
         document.getElementById('hotRewardReason').value = '';
-        
-        // Reload các phần liên quan
-        await loadData();
+
+        // Refresh giao diện
         updateOverview();
         renderRewards();
-        
-        alert(`✅ Đã tặng thưởng ${amount.toLocaleString('vi-VN')}đ cho con!\n\nCon sẽ thấy ngay trên màn hình của mình! 🎉`);
-        
+
+        alert(amount >= 0 
+            ? `ĐÃ TẶNG ${amount.toLocaleString()}đ CHO CON!`
+            : `ĐÃ TRỪ ${Math.abs(amount).toLocaleString()}đ KHỎI TÀI KHOẢN CON!`
+        );
+
     } catch (error) {
         console.error('Hot reward error:', error);
-        alert('❌ Lỗi: ' + error.message);
+        alert('Lỗi: ' + error.message);
     }
 }
 
@@ -1642,10 +1651,19 @@ async function editReward(sessionId) {
     if (newReward === null) return; // User clicked Cancel
     
     const amount = parseInt(newReward);
-    if (isNaN(amount) || amount < 0) {
-        alert('❌ Số tiền không hợp lệ!');
-        return;
-    }
+   if (isNaN(amount)) {
+    alert('❌ Vui lòng chỉ nhập số!');
+    return;
+}
+if (amount < 0) {
+    // Cho phép số âm = trừ tiền
+    const confirmMinus = confirm(
+        `Bạn đang nhập số âm: ${amount.toLocaleString()}đ\n\n` +
+        `→ Điều này sẽ TRỪ TIỀN thưởng của buổi học này!\n\n` +
+        `Bạn có chắc chắn muốn trừ tiền không?`
+    );
+    if (!confirmMinus) return;
+}
     
     const reason = prompt(
         `Lý do thay đổi từ ${currentReward.toLocaleString('vi-VN')}đ → ${amount.toLocaleString('vi-VN')}đ:`,
@@ -1707,63 +1725,98 @@ async function editReward(sessionId) {
 // Xóa bản ghi tiền thưởng
 async function deleteReward(sessionId) {
     const session = sessionHistory.find(s => s.id === sessionId);
-    if (!session) return;
-    
+    if (!session) {
+        alert('Không tìm thấy bản ghi!');
+        return;
+    }
+
     const reason = prompt(
-        `⚠️ XÓA HOÀN TOÀN bản ghi tiền thưởng:\n\n` +
+        `XÓA HOÀN TOÀN bản ghi tiền thưởng:\n\n` +
         `Bài: ${session.subject}\n` +
         `Ngày: ${new Date(session.date).toLocaleString('vi-VN')}\n` +
-        `Tiền: ${session.reward.toLocaleString('vi-VN')}đ\n\n` +
+        `Tiền: ${session.reward?.toLocaleString('vi-VN')}đ\n\n` +
         `Nhập lý do xóa:`,
         'Lỗi hệ thống / Chấm trùng'
     );
-    
-    if (!reason || !reason.trim()) {
-        alert('❌ Phải nhập lý do xóa!');
+
+    if (!reason?.trim()) {
+        alert('Phải nhập lý do xóa!');
         return;
     }
-    
+
     if (!confirm(
-        `🚨 XÁC NHẬN XÓA VĨNH VIỄN?\n\n` +
+        `XÁC NHẬN XÓA VĨNH VIỄN?\n\n` +
         `Bài: ${session.subject}\n` +
-        `Tiền: ${session.reward.toLocaleString('vi-VN')}đ\n` +
+        `Tiền: ${session.reward?.toLocaleString('vi-VN')}đ\n` +
         `Lý do: ${reason}\n\n` +
-        `⚠️ Hành động này KHÔNG THỂ HOÀN TÁC!`
+        `Hành động này KHÔNG THỂ HOÀN TÁC!`
     )) {
         return;
     }
-    
+
     try {
-        // Lưu log xóa trước khi xóa
+        // 1. Lưu vào thùng rác trước
         await db.collection('deletedSessions').add({
             ...session,
             deletedBy: 'parent',
             deletedAt: new Date().toISOString(),
-            deleteReason: reason
+            deleteReason: reason.trim()
         });
-        
-        // Xóa khỏi Firebase
+
+        // 2. XÓA THẬT trên Firebase
         await db.collection('sessions').doc(sessionId).delete();
-        
-        // Xóa khỏi local state
+
+        // 3. XÓA KHỎI local array (quan trọng!)
         const index = sessionHistory.findIndex(s => s.id === sessionId);
         if (index > -1) {
             sessionHistory.splice(index, 1);
         }
-        
-        // Reload
-        await loadData();
+
+        // 4. KHÔNG gọi loadData() nữa → vì nó sẽ đọc lại dữ liệu cũ!
+        // Thay vào đó chỉ render lại các phần cần thiết
         updateOverview();
         renderRewards();
-        renderSessions();
-        
-        alert(`✅ Đã xóa bản ghi!\n\nLý do: ${reason}\n\n(Đã lưu vào thùng rác để kiểm tra sau)`);
-        
+        renderSessions();  // nếu bạn đang ở tab lịch sử
+
+        alert(`ĐÃ XÓA THÀNH CÔNG!\n\nLý do: ${reason.trim()}\n(Dữ liệu đã chuyển vào thùng rác)`);
+
     } catch (error) {
         console.error('Delete reward error:', error);
-        alert('❌ Lỗi: ' + error.message);
+        alert('Lỗi khi xóa: ' + error.message);
     }
 }
+// ĐÁNH DẤU ĐÃ TRẢ TIỀN - HOẠT ĐỘNG 100% CHO CẢ BUỔI HỌC LẪN THƯỞNG NÓNG
+async function markPaid(sessionId) {
+    if (!confirm('Đã trả tiền cho con rồi đúng không?\nĐánh dấu là ĐÃ TRẢ luôn nhé!')) {
+        return;
+    }
+
+    try {
+        // Cập nhật trên Firebase
+        await db.collection('sessions').doc(sessionId).update({
+            paid: true,
+            paidDate: new Date().toISOString()
+        });
+
+        // Cập nhật mảng local để giao diện refresh ngay
+        const session = sessionHistory.find(s => s.id === sessionId);
+        if (session) {
+            session.paid = true;
+            session.paidDate = new Date().toISOString();
+        }
+
+        // Refresh lại các phần hiển thị
+        updateOverview();
+        renderRewards();
+
+        alert('Đã đánh dấu ĐÃ TRẢ thành công!');
+
+    } catch (error) {
+        console.error('Lỗi đánh dấu đã trả:', error);
+        alert('Không thể đánh dấu. Chi tiết lỗi:\n' + error.message);
+    }
+}
+
     </script>
 <!-- Modal chỉnh sửa/thêm lịch -->
 <div class="modal" id="scheduleModal">
