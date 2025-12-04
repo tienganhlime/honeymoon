@@ -1898,15 +1898,89 @@ async function saveSessionData() {
     }
 
     let feedback = '';
-    if (currentSession.completionRate >= 100 && currentSession.totalTime <= currentSession.targetTime) {
-        feedback = '🌟 Xuất sắc! Con đã hoàn thành đúng giờ và đầy đủ!';
-    } else if (currentSession.completionRate >= 90) {
-        feedback = '💪 Rất tốt! Con đang tiến bộ đều đặn!';
-    } else if (currentSession.totalTime > currentSession.targetTime * 1.5) {
-        feedback = '⚠️ Con làm chậm hơn dự kiến. Hãy tập trung hơn hoặc hỏi bố mẹ nhé!';
-    } else {
-        feedback = '👍 Cố gắng lên! Lần sau sẽ tốt hơn!';
-    }
+
+// 1. HOÀN HẢO (100% + đúng giờ hoặc nhanh hơn)
+if (currentSession.completionRate >= 100 && currentSession.totalTime <= currentSession.targetTime) {
+    const messages = [
+        '🌟 XUẤT SẮC! Con đã làm xong đúng giờ và đầy đủ! Đây chính là cách mà những người thành công nhất thế giới bắt đầu ngày mới của họ!\n“Thành công là tổng hợp của những nỗ lực nhỏ, lặp đi lặp lại mỗi ngày.” – Robert Collier',
+
+        '🔥 CON TRAI/CON GÁI BỐ MẸ LÀ SỐ 1! Hoàn thành 100% và còn nhanh hơn mục tiêu nữa chứ!\n“The secret of getting ahead is getting started… and finishing strong.” – Mark Twain (đã được con làm xuất sắc cả hai!)',
+
+        '🏆 Hôm nay con đã đánh bại chính mình của ngày hôm qua. Đây chính là công thức của mọi nhà vô địch!\n“Người chiến thắng không bao giờ bỏ cuộc, người bỏ cuộc không bao giờ chiến thắng.” – Vince Lombardi',
+
+        '✨ Con ơi, đây không phải là một buổi học bình thường. Đây là một ngày con chứng minh mình sinh ra để vĩ đại!\n“The future belongs to those who believe in the beauty of their dreams.” – Eleanor Roosevelt',
+
+        '⚡ Con vừa lập một kỷ lục mà chỉ những người có kỷ luật thép mới làm được!\n“Discipline is choosing between what you want now and what you want most.” – Abraham Lincoln',
+
+        '💎 Con chính là viên kim cương đang được mài mỗi ngày. Hôm nay lại sáng lấp lánh hơn hôm qua rồi!\n“I am not what happened to me, I am what I choose to become.” – Carl Jung',
+
+        '🌈 Con vừa vẽ thêm một ngày HOÀN HẢO vào cuốn sách cuộc đời mình. Bố mẹ đang đọc mà nổi da gà đây!\n“Great things never came from comfort zones.” – Roy Bennett',
+
+        '👑 Hôm nay con không chỉ hoàn thành – con đã THỐNG TRỊ mục tiêu!\n“Today’s accomplishments were yesterday’s impossibilities.” – Robert H. Schuller',
+
+        '❤️ Bố mẹ không nói suông đâu: Con đang đi đúng con đường mà Elon Musk, Messi, Sơn Tùng… từng đi đấy!\nKeep showing up like this, and the world will make room for you.'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
+
+// 2. RẤT TỐT (≥ 90%)
+} else if (currentSession.completionRate >= 90) {
+    const messages = [
+        '💪 RẤT XUẤT SẮC! Chỉ còn một bước chân nữa thôi là con chạm đến sự hoàn hảo rồi!\n“Con không cần phải giỏi để bắt đầu, nhưng con phải bắt đầu để trở nên giỏi.” – Zig Ziglar',
+
+        '🚀 Con đang ở đúng quỹ đạo của những người sẽ làm nên chuyện lớn!\n“I’ve failed over and over and over again in my life. And that is why I succeed.” – Michael Jordan',
+
+        '✨ 90%+ là mức mà 99% người khác chỉ dám mơ. Con thì đang sống trong đó mỗi ngày!\n“Thành công không phải là đích đến, mà là hành trình.” – Zig Ziglar',
+
+        '🔥 Con trai/con gái ơi, bố mẹ nhìn thấy tương lai cực kỳ sáng của con rồi đấy!\n“Fall seven times, stand up eight.” – Nhật Bản',
+
+        '🌟 Chỉ thiếu chút xíu nữa thôi là con lập kỷ lục mới. Cảm giác này tuyệt chứ con?\n“The only way to do great work is to love what you do.” – Steve Jobs',
+
+        '🏅 Hôm nay con lại chứng minh: Khi con nghiêm túc, không gì cản nổi!\n“Don’t watch the clock; do what it does. Keep going.” – Sam Levenson',
+
+        '💙 Cứ giữ lửa này, 5–10 năm nữa con sẽ cảm ơn chính mình của hôm nay!\n“The best investment you can make is in yourself.” – Warren Buffett',
+
+        '⚡ Con đang tiến bộ với tốc độ mà người khác phải ngước nhìn. Tự hào lắm!'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
+
+// 3. CHẬM NHIỀU (totalTime > targetTime * 1.5)
+} else if (currentSession.totalTime > currentSession.targetTime * 1.5) {
+    const messages = [
+        '⏰ Hôm nay con hơi chậm hơn một chút, không sao cả con trai/con gái ơi!\n“Thời gian quý hơn tiền bạc. Con có thể kiếm thêm tiền, nhưng không thể kiếm thêm thời gian.” – Jim Rohn\nLần sau mình cùng tập trung hơn nhé, bố mẹ tin con làm được!',
+
+        '⚡ Con ơi, ai mà chẳng có ngày hơi “lag” một chút. Quan trọng là con đã không bỏ cuộc!\n“Tôi không thua, tôi chỉ tìm ra 10.000 cách không hoạt động thôi.” – Thomas Edison',
+
+        '❤️ Không sao đâu con yêu, ngày mai là một ngày hoàn toàn mới!\n“Chỉ những người dám thất bại lớn mới có thể đạt được thành công lớn.” – Robert F. Kennedy',
+
+        '🌱 Cây muốn cao phải chịu mưa gió. Hôm nay chậm một chút, mai con sẽ nhanh gấp đôi!\n“It’s not how fast you go, it’s that you don’t stop.” – Khổng Tử',
+
+        '💡 Có thể hôm nay con chưa tập trung tối đa, nhưng bố mẹ biết con có thể làm chủ thời gian mà!\n“The best way to predict the future is to create it.” – Peter Drucker',
+
+        '🐢 Nhớ câu chuyện rùa và thỏ không con? Rùa thắng vì kiên trì. Con vẫn đang về đích, thế là thắng rồi!\n“Slow and steady wins the race.”',
+
+        '🫂 Bố mẹ ở đây không phải để trách, mà để cùng con mạnh mẽ hơn mỗi ngày. Mai mình “phục thù” nhé con!'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
+
+// 4. CÒN LẠI (dưới 90% hoặc hơi chậm)
+} else {
+    const messages = [
+        '👍 Cố lên con yêu! Mỗi ngày con ngồi vào bàn học là con đã thắng sự lười biếng rồi!\n“The man who moves a mountain begins by carrying away small stones.” – Khổng Tử',
+
+        '🌱 Con đang gieo những hạt giống thành công. Có khi hôm nay chưa nảy mầm, nhưng cây đang lớn lên từng ngày!\n“It does not matter how slowly you go as long as you do not stop.” – Khổng Tử',
+
+        '💙 Bố mẹ tự hào vì con đã không bỏ cuộc. Đó là phẩm chất của mọi người vĩ đại!\n“You don’t have to be great to start, but you have to start to be great.” – Zig Ziglar',
+
+        '🔥 Mỗi lần con cố gắng là con đang rèn một thanh kiếm sắc bén hơn cho tương lai!\n“Every master was once a disaster.” – David Goggins',
+
+        '🌟 Hôm nay chưa phải ngày đẹp nhất của con, nhưng chắc chắn là nền móng cho những ngày đẹp nhất sắp tới!\n“The expert in anything was once a beginner.” – Helen Hayes',
+
+        '❤️ Con chỉ cần tốt hơn chính mình ngày hôm qua là bố mẹ đã hạnh phúc lắm rồi!\n“Be better than the you from yesterday.”',
+
+        '💪 Con ơi, những người thành công nhất thế giới cũng từng có ngày như thế này. Điều khác biệt là họ không bao giờ dừng lại. Con cũng thế!'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
+}
 
     const sessionData = {
         id: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -2122,8 +2196,7 @@ async function migrateLocalDataToFirebase() {
 }
 
 // GỌI HÀM NÀY 1 LẦN để migrate
-// migrateLocalDataToFirebase();
+migrateLocalDataToFirebase();
 </script>
 </body>
-
 </html>
