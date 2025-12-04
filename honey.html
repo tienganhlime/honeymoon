@@ -768,6 +768,24 @@
     // Schedule data
     // Schedule data - SẼ LOAD TỪ FIREBASE
 let SCHEDULE = {};
+let ACTIVITIES = [];
+let REWARD_SETTINGS = {
+    onTime: 10000,
+    fast: 15000,
+    complete100: 20000,
+    complete90: 10000,
+    examBonus: 25000
+};
+
+const FORM_TEMPLATES = {
+    'FCE Reading - Part 5': {parts: 1, questions: [6]},
+    'FCE Reading - Part 6': {parts: 1, questions: [6]},
+    'FCE Reading - Part 7': {parts: 1, questions: [10]},
+    'FCE Writing - Essay': {parts: 1, questions: [1]},
+    'FCE Writing - Article/Review': {parts: 1, questions: [1]},
+    'Toán - Bài tập SGK': {parts: 1, questions: [10]},
+    'Toán - Bài tập nâng cao': {parts: 1, questions: [5]}
+};
 
 // Load schedule từ Firebase
 async function loadScheduleFromFirebase() {
@@ -775,10 +793,19 @@ async function loadScheduleFromFirebase() {
         const doc = await db.collection('settings').doc('schedule').get();
         if (doc.exists && doc.data().schedule) {
             SCHEDULE = doc.data().schedule;
-            console.log('✅ Đã load schedule từ Firebase');
+            console.log('✅ Đã load schedule từ Firebase:', SCHEDULE);
         } else {
-            console.log('⚠️ Chưa có schedule trên Firebase');
-            SCHEDULE = {}; // Để trống, hoặc có thể set default
+            console.warn('⚠️ Chưa có schedule trên Firebase, dùng mặc định');
+            // ✅ THÊM FALLBACK
+            SCHEDULE = {
+                "Monday": [{time: "17h-20h", subject: "Toán + FCE", type: "homework"}],
+                "Tuesday": [{time: "17h-20h", subject: "Yên Hòa HW + FCE extra speaking", type: "homework"}],
+                "Wednesday": [{time: "19h-20h", subject: "Toán cô Hải - Chữa đề", type: "class"}],
+                "Thursday": [{time: "17h-20h", subject: "Toán + FCE", type: "homework"}],
+                "Friday": [{time: "17h-20h", subject: "Yên Hòa HW + FCE extra speaking", type: "homework"}],
+                "Saturday": [{time: "21h-23h", subject: "FCE extra listening", type: "homework"}],
+                "Sunday": [{time: "21h-23h", subject: "FCE Speaking", type: "homework"}]
+            };
         }
     } catch (error) {
         console.error('❌ Load schedule error:', error);
@@ -786,45 +813,6 @@ async function loadScheduleFromFirebase() {
     }
 }
 
-    // Form templates
-    const FORM_TEMPLATES = {
-        'FCE Reading': {parts: 7, questions: [8,6,6,7,6,6,10]},
-        'FCE Writing': {parts: 2, questions: [1,1]},
-        'FCE Listening': {parts: 4, questions: [8,10,5,7]},
-        'FCE Speaking': {parts: 4, questions: [1,1,1,1]},
-        'Toán cô Hải - Chữa đề': {parts: 1, questions: [15]}
-    };
-// Thêm biến global
-let ACTIVITIES = [];
-let REWARD_SETTINGS = {
-    onTime: 2000,
-    fast: 1000,
-    complete100: 2000,
-    complete90: 1000,
-    examBonus: 1000
-};
-// Load activities từ Firebase
-async function loadActivitiesFromFirebase() {
-    try {
-        const doc = await db.collection('settings').doc('activities').get();
-        if (doc.exists && doc.data().activities) {
-            ACTIVITIES = doc.data().activities;
-            console.log('✅ Đã load activities từ Firebase');
-        } else {
-            // Default nếu chưa có
-            ACTIVITIES = [
-                { name: 'Nhảy theo nhạc', icon: '💃' },
-                { name: 'Chạy cầu thang', icon: '🏃' },
-                { name: 'Bôi kem cho bố', icon: '🤗' },
-                { name: 'Uống nước', icon: '💧' }
-            ];
-            console.log('⚠️ Dùng activities mặc định');
-        }
-    } catch (error) {
-        console.error('❌ Load activities error:', error);
-        ACTIVITIES = [];
-    }
-}
 async function loadRewardSettings() {
     try {
         const doc = await db.collection('settings').doc('rewards').get();
@@ -840,6 +828,35 @@ async function loadRewardSettings() {
         console.error('❌ Load reward settings error:', error);
     }
 }
+
+// Thêm sau dòng 755 (sau hàm loadRewardSettings)
+async function loadActivitiesFromFirebase() {
+    try {
+        const doc = await db.collection('settings').doc('activities').get();
+        if (doc.exists && doc.data().activities) {
+            ACTIVITIES = doc.data().activities;
+            console.log('✅ Đã load activities từ Firebase:', ACTIVITIES);
+        } else {
+            // Dùng mặc định nếu chưa có
+            ACTIVITIES = [
+                {name: 'Nghe nhạc', icon: '🎵'},
+                {name: 'Xem YouTube', icon: '📺'},
+                {name: 'Chơi game', icon: '🎮'},
+                {name: 'Đọc truyện', icon: '📚'},
+                {name: 'Vẽ/tô màu', icon: '🎨'},
+                {name: 'Tập thể dục', icon: '💪'}
+            ];
+            console.warn('⚠️ Chưa có activities, dùng mặc định');
+        }
+    } catch (error) {
+        console.error('❌ Load activities error:', error);
+        ACTIVITIES = [
+            {name: 'Nghe nhạc', icon: '🎵'},
+            {name: 'Xem YouTube', icon: '📺'}
+        ];
+    }
+}
+
 // Render activities vào break modal
 function renderBreakActivities() {
     const container = document.getElementById('breakActivitiesContainer');
@@ -931,12 +948,12 @@ Hãy kiên nhẫn với em nhé!`
     let breakWarningTimeout = null;
 
     // Initialize
-    window.onload = async function() {
+window.onload = async function() {
     await loadScheduleFromFirebase();
     await loadActivitiesFromFirebase();
-await loadRewardSettings();
+    await loadRewardSettings();
     displayDate();
-    loadSchedule();
+    await loadSchedule(); // ✅ THÊM await
     loadProgress();
 };
 
@@ -953,44 +970,81 @@ await loadRewardSettings();
         return dayName;
     }
 
-    function loadSchedule() {
-        const dayName = displayDate();
-        const todaySchedule = SCHEDULE[dayName] || [];
-        const container = document.getElementById('scheduleContainer');
-        container.innerHTML = '';
+   async function loadSchedule() {
+    const dayName = displayDate();
+    const todaySchedule = SCHEDULE[dayName] || [];
+    const container = document.getElementById('scheduleContainer');
+    container.innerHTML = '';
 
-        todaySchedule.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = 'subject-card';
+    // ✅ Đồng bộ completedSubjects TỪ FIREBASE
+    try {
+        const today = new Date().toISOString().split('T')[0]; // "2025-01-15"
+        const snap = await db.collection('sessions')
+            .where('date', '>=', today + 'T00:00:00.000Z')
+            .where('date', '<=', today + 'T23:59:59.999Z')
+            .get();
+        
+        const completedToday = new Set();
+        
+        snap.forEach(doc => {
+            const session = doc.data();
             
-            if (item.type === 'class') {
-                card.className += ' class-type';
-            }
-            
-            if (completedSubjects.includes(index)) {
-                card.className += ' completed';
-            }
-            
-            if (currentSession && currentSession.index === index) {
-                card.className += ' in-progress';
-            }
-
-            let typeLabel = '';
-            if (item.type === 'homework') typeLabel = '📝 Bài tập về nhà';
-            else if (item.type === 'class') typeLabel = '🏫 Học tại lớp';
-            else if (item.type === 'break') typeLabel = '☕ Nghỉ ngơi';
-
-            card.innerHTML = `
-                <div class="time-badge">${item.time}</div>
-                <div class="subject-name">${item.subject}</div>
-                <div class="subject-type">${typeLabel}</div>
-            `;
-
-            card.onclick = () => handleSubjectClick(item, index);
-            container.appendChild(card);
+            // ✅ Tìm index của subject trong todaySchedule
+            todaySchedule.forEach((item, idx) => {
+                if (item.subject === session.subject) {
+                    completedToday.add(idx);
+                }
+            });
         });
+        
+        // ✅ Cập nhật completedSubjects
+        completedSubjects = Array.from(completedToday);
+        localStorage.setItem('completedSubjects', JSON.stringify(completedSubjects));
+        
+        console.log('✅ Completed subjects today:', completedSubjects);
+        
+    } catch (error) {
+        console.error('❌ Load completed from Firebase error:', error);
+        // Nếu lỗi, dùng localStorage backup
+        const saved = localStorage.getItem('completedSubjects');
+        if (saved) completedSubjects = JSON.parse(saved);
     }
 
+    // ✅ RENDER SCHEDULE
+    todaySchedule.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'subject-card';
+        
+        if (item.type === 'class') {
+            card.className += ' class-type';
+        }
+        
+        // ✅ Kiểm tra đã hoàn thành
+        if (completedSubjects.includes(index)) {
+            card.className += ' completed';
+            console.log(`✅ Subject ${item.subject} at index ${index} is completed`);
+        }
+        
+        // ✅ Kiểm tra đang làm
+        if (currentSession && currentSession.index === index) {
+            card.className += ' in-progress';
+        }
+
+        let typeLabel = '';
+        if (item.type === 'homework') typeLabel = '📝 Bài tập về nhà';
+        else if (item.type === 'class') typeLabel = '🏫 Học tại lớp';
+        else if (item.type === 'break') typeLabel = '☕ Nghỉ ngơi';
+
+        card.innerHTML = `
+            <div class="time-badge">${item.time}</div>
+            <div class="subject-name">${item.subject}</div>
+            <div class="subject-type">${typeLabel}</div>
+        `;
+
+        card.onclick = () => handleSubjectClick(item, index);
+        container.appendChild(card);
+    });
+}
     function handleSubjectClick(subject, index) {
         if (completedSubjects.includes(index)) {
             alert('Môn này đã hoàn thành rồi! 🎉');
@@ -1099,10 +1153,16 @@ await loadRewardSettings();
     }
 
     function selectMode(mode) {
+    // ✅ Kiểm tra currentSession tồn tại
+    if (!currentSession) {
+        currentSession = {mode: mode};
+    } else {
         currentSession.mode = mode;
-        document.getElementById('modeNormal').classList.toggle('selected', mode === 'normal');
-        document.getElementById('modeExam').classList.toggle('selected', mode === 'exam');
     }
+    
+    document.getElementById('modeNormal').classList.toggle('selected', mode === 'normal');
+    document.getElementById('modeExam').classList.toggle('selected', mode === 'exam');
+}
 
     function updateFormTemplate() {
         const template = document.getElementById('formTemplate').value;
@@ -1137,31 +1197,43 @@ await loadRewardSettings();
     }
 
     function startWork() {
-        const numParts = parseInt(document.getElementById('numParts').value);
-        const questionsStr = document.getElementById('numQuestions').value;
-        const targetTime = parseInt(document.getElementById('targetTime').value);
-        
-        const questions = questionsStr.split(',').map(q => parseInt(q.trim()));
-        if (questions.length !== numParts) {
-            alert('Số câu không khớp với số phần!');
-            return;
-        }
-        
-        currentSession.numParts = numParts;
-        currentSession.questions = questions;
-        currentSession.targetTime = targetTime * 60; // convert to seconds
-        currentSession.completedQuestions = [];
-        currentSession.startTime = Date.now();
-        currentSession.callParentLogs = [];
-        
-        closeModal('setupModal');
-        
-        if (currentSession.mode === 'exam') {
-            showExamMode();
-        } else {
-            showWorkModal();
-        }
+    const numParts = parseInt(document.getElementById('numParts').value);
+    const questionsStr = document.getElementById('numQuestions').value;
+    const targetTime = parseInt(document.getElementById('targetTime').value);
+    
+    const questions = questionsStr.split(',').map(q => parseInt(q.trim()));
+    if (questions.length !== numParts) {
+        alert('Số câu không khớp với số phần!');
+        return;
     }
+    
+    // ✅ ĐẢM BẢO currentSession.mode ĐÃ TỒN TẠI
+    if (!currentSession) {
+        alert('Lỗi: Chưa chọn môn học!');
+        return;
+    }
+    
+    // ✅ Nếu chưa có mode, set mặc định là 'normal'
+    if (!currentSession.mode) {
+        currentSession.mode = 'normal';
+    }
+    
+    currentSession.numParts = numParts;
+    currentSession.questions = questions;
+    currentSession.targetTime = targetTime * 60; // convert to seconds
+    currentSession.completedQuestions = [];
+    currentSession.startTime = Date.now();
+    currentSession.callParentLogs = [];
+    
+    closeModal('setupModal');
+    
+    if (currentSession.mode === 'exam') {
+        showExamMode();
+    } else {
+        showWorkModal();
+    }
+}
+
     
     function showExamMode() {
         const screen = document.getElementById('examModeScreen');
@@ -1267,18 +1339,23 @@ await loadRewardSettings();
     }
 
     function toggleQuestion(index, element) {
-        if (currentSession.completedQuestions.includes(index)) {
-            currentSession.completedQuestions = currentSession.completedQuestions.filter(q => q !== index);
-            element.classList.remove('completed');
-        } else {
-            currentSession.completedQuestions.push(index);
-            element.classList.add('completed');
-            
-            if (Math.random() > 0.7) {
-                showEncouragement();
-            }
+    if (!currentSession) return;
+    
+    if (currentSession.completedQuestions.includes(index)) {
+        currentSession.completedQuestions = currentSession.completedQuestions.filter(q => q !== index);
+        element.classList.remove('completed');
+    } else {
+        currentSession.completedQuestions.push(index);
+        element.classList.add('completed');
+        
+        // ✅ Debug log
+        console.log('✅ Completed questions:', currentSession.completedQuestions);
+        
+        if (Math.random() > 0.7) {
+            showEncouragement();
         }
     }
+}
 
     function showEncouragement() {
         const messages = [
@@ -1377,83 +1454,199 @@ await loadRewardSettings();
     }
 
     function finishWork() {
-        clearInterval(timerInterval);
-        
-        const totalTime = Math.floor((Date.now() - workStartTime) / 1000);
-        const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
-        const completed = currentSession.mode === 'exam' ? totalQuestions : currentSession.completedQuestions.length;
-        
-        currentSession.totalTime = totalTime;
-        currentSession.completionRate = (completed / totalQuestions * 100).toFixed(1);
-        
-        if (currentSession.mode === 'exam') {
-            document.getElementById('examModeScreen').classList.remove('active');
-        } else {
-            closeModal('workModal');
-        }
-        
-        showResultModal();
+    // ✅ Kiểm tra ngay từ đầu
+    if (!currentSession) {
+        alert('Lỗi: Không tìm thấy thông tin bài làm!');
+        console.error('currentSession is null in finishWork()');
+        return;
     }
+    
+    clearInterval(timerInterval);
+    
+    const totalTime = Math.floor((Date.now() - workStartTime) / 1000);
+    const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
+    const completed = currentSession.mode === 'exam' ? totalQuestions : currentSession.completedQuestions.length;
+    
+    // ✅ Gán vào currentSession
+    currentSession.totalTime = totalTime;
+    currentSession.completionRate = (completed / totalQuestions * 100).toFixed(1);
+    
+    // ✅ Đóng UI TRƯỚC, nhưng GIỮ NGUYÊN currentSession
+    if (currentSession.mode === 'exam') {
+        document.getElementById('examModeScreen').classList.remove('active');
+    } else {
+        // Chỉ đóng modal, không gọi closeModal() để tránh reset
+        document.getElementById('workModal').classList.remove('active');
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+    
+    // ✅ Hiển thị kết quả (lúc này currentSession vẫn còn)
+    showResultModal();
+}
 
     function showResultModal() {
-        const modal = document.getElementById('resultModal');
-        const content = document.getElementById('resultContent');
-        
-        const totalTime = currentSession.totalTime;
-        const targetTime = currentSession.targetTime;
-        const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
-        const completed = currentSession.mode === 'exam' ? totalQuestions : currentSession.completedQuestions.length;
-        const avgTime = (totalTime / completed).toFixed(1);
-        
-        const minutesUsed = Math.floor(totalTime / 60);
-        const secondsUsed = totalTime % 60;
-        const minutesTarget = Math.floor(targetTime / 60);
-        
-        let reward = 0;
-let rewardReason = [];
+    // ✅ Kiểm tra currentSession
+    if (!currentSession) {
+        alert('Lỗi: Không có dữ liệu phiên làm bài!');
+        return;
+    }
+    
+    const modal = document.getElementById('resultModal');
+    const content = document.getElementById('resultContent');
+    
+    // ✅ Kiểm tra các thuộc tính cần thiết
+    if (!currentSession.totalTime || !currentSession.targetTime || !currentSession.questions) {
+        alert('Lỗi: Thiếu thông tin bài làm!');
+        console.error('currentSession:', currentSession);
+        return;
+    }
+    
+    const totalTime = currentSession.totalTime;
+    const targetTime = currentSession.targetTime;
+    const totalQuestions = currentSession.questions.reduce((a, b) => a + b, 0);
+    
+    // ✅ SỬA PHẦN NÀY - Kiểm tra completedQuestions có tồn tại không
+    let completed;
+    if (currentSession.mode === 'exam') {
+        completed = totalQuestions; // Chế độ thi = làm hết
+    } else {
+        // Chế độ thường - đếm số câu đã tick
+        completed = currentSession.completedQuestions ? currentSession.completedQuestions.length : 0;
+    }
+    
+    // ✅ Tránh chia cho 0
+    const avgTime = completed > 0 ? (totalTime / completed).toFixed(1) : 0;
+    
+    const minutesUsed = Math.floor(totalTime / 60);
+    const secondsUsed = totalTime % 60;
+    const minutesTarget = Math.floor(targetTime / 60);
+    
+    let reward = 0;
+    let rewardReason = [];
 
-if (totalTime <= targetTime) {
-    reward += REWARD_SETTINGS.onTime;
-    rewardReason.push(`Hoàn thành đúng thời gian: +${REWARD_SETTINGS.onTime.toLocaleString('vi-VN')}đ`);
-}
+    if (totalTime <= targetTime) {
+        reward += REWARD_SETTINGS.onTime;
+        rewardReason.push(`Hoàn thành đúng thời gian: +${REWARD_SETTINGS.onTime.toLocaleString('vi-VN')}đ`);
+    }
 
-if (totalTime <= targetTime * 0.8) {
-    reward += REWARD_SETTINGS.fast;
-    rewardReason.push(`Làm nhanh hơn 20%: +${REWARD_SETTINGS.fast.toLocaleString('vi-VN')}đ`);
-}
+    if (totalTime <= targetTime * 0.8) {
+        reward += REWARD_SETTINGS.fast;
+        rewardReason.push(`Làm nhanh hơn 20%: +${REWARD_SETTINGS.fast.toLocaleString('vi-VN')}đ`);
+    }
 
-if (completed === totalQuestions) {
-    reward += REWARD_SETTINGS.complete100;
-    rewardReason.push(`Hoàn thành 100%: +${REWARD_SETTINGS.complete100.toLocaleString('vi-VN')}đ`);
-} else if (completed >= totalQuestions * 0.9) {
-    reward += REWARD_SETTINGS.complete90;
-    rewardReason.push(`Hoàn thành 90%+: +${REWARD_SETTINGS.complete90.toLocaleString('vi-VN')}đ`);
-}
+    if (completed === totalQuestions) {
+        reward += REWARD_SETTINGS.complete100;
+        rewardReason.push(`Hoàn thành 100%: +${REWARD_SETTINGS.complete100.toLocaleString('vi-VN')}đ`);
+    } else if (completed >= totalQuestions * 0.9) {
+        reward += REWARD_SETTINGS.complete90;
+        rewardReason.push(`Hoàn thành 90%+: +${REWARD_SETTINGS.complete90.toLocaleString('vi-VN')}đ`);
+    }
 
-if (currentSession.mode === 'exam') {
-    reward += REWARD_SETTINGS.examBonus;
-    rewardReason.push(`Chế độ luyện thi (bonus): +${REWARD_SETTINGS.examBonus.toLocaleString('vi-VN')}đ`);
+    if (currentSession.mode === 'exam') {
+        reward += REWARD_SETTINGS.examBonus;
+        rewardReason.push(`Chế độ luyện thi (bonus): +${REWARD_SETTINGS.examBonus.toLocaleString('vi-VN')}đ`);
+    }
+        
+    currentSession.reward = reward;
+        
+        let feedback = '';
+
+// 1. HOÀN HẢO (100% + đúng giờ hoặc nhanh hơn)
+if (currentSession.completionRate >= 100 && currentSession.totalTime <= currentSession.targetTime) {
+    const messages = [
+        '🌟 XUẤT SẮC! Con đã làm xong đúng giờ và đầy đủ! Đây chính là cách mà những người thành công nhất thế giới bắt đầu ngày mới của họ!\n“Thành công là tổng hợp của những nỗ lực nhỏ, lặp đi lặp lại mỗi ngày.” – Robert Collier',
+
+        '🔥 CON TRAI/CON GÁI BỐ MẸ LÀ SỐ 1! Hoàn thành 100% và còn nhanh hơn mục tiêu nữa chứ!\n“The secret of getting ahead is getting started… and finishing strong.” – Mark Twain (đã được con làm xuất sắc cả hai!)',
+
+        '🏆 Hôm nay con đã đánh bại chính mình của ngày hôm qua. Đây chính là công thức của mọi nhà vô địch!\n“Người chiến thắng không bao giờ bỏ cuộc, người bỏ cuộc không bao giờ chiến thắng.” – Vince Lombardi',
+
+        '✨ Con ơi, đây không phải là một buổi học bình thường. Đây là một ngày con chứng minh mình sinh ra để vĩ đại!\n“The future belongs to those who believe in the beauty of their dreams.” – Eleanor Roosevelt',
+
+        '⚡ Con vừa lập một kỷ lục mà chỉ những người có kỷ luật thép mới làm được!\n“Discipline is choosing between what you want now and what you want most.” – Abraham Lincoln',
+
+        '💎 Con chính là viên kim cương đang được mài mỗi ngày. Hôm nay lại sáng lấp lánh hơn hôm qua rồi!\n“I am not what happened to me, I am what I choose to become.” – Carl Jung',
+
+        '🌈 Con vừa vẽ thêm một ngày HOÀN HẢO vào cuốn sách cuộc đời mình. Bố mẹ đang đọc mà nổi da gà đây!\n“Great things never came from comfort zones.” – Roy Bennett',
+
+        '👑 Hôm nay con không chỉ hoàn thành – con đã THỐNG TRỊ mục tiêu!\n“Today’s accomplishments were yesterday’s impossibilities.” – Robert H. Schuller',
+
+        '❤️ Bố mẹ không nói suông đâu: Con đang đi đúng con đường mà Elon Musk, Messi, Sơn Tùng… từng đi đấy!\nKeep showing up like this, and the world will make room for you.'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
+
+// 2. RẤT TỐT (≥ 90%)
+} else if (currentSession.completionRate >= 90) {
+    const messages = [
+        '💪 RẤT XUẤT SẮC! Chỉ còn một bước chân nữa thôi là con chạm đến sự hoàn hảo rồi!\n“Con không cần phải giỏi để bắt đầu, nhưng con phải bắt đầu để trở nên giỏi.” – Zig Ziglar',
+
+        '🚀 Con đang ở đúng quỹ đạo của những người sẽ làm nên chuyện lớn!\n“I’ve failed over and over and over again in my life. And that is why I succeed.” – Michael Jordan',
+
+        '✨ 90%+ là mức mà 99% người khác chỉ dám mơ. Con thì đang sống trong đó mỗi ngày!\n“Thành công không phải là đích đến, mà là hành trình.” – Zig Ziglar',
+
+        '🔥 Con trai/con gái ơi, bố mẹ nhìn thấy tương lai cực kỳ sáng của con rồi đấy!\n“Fall seven times, stand up eight.” – Nhật Bản',
+
+        '🌟 Chỉ thiếu chút xíu nữa thôi là con lập kỷ lục mới. Cảm giác này tuyệt chứ con?\n“The only way to do great work is to love what you do.” – Steve Jobs',
+
+        '🏅 Hôm nay con lại chứng minh: Khi con nghiêm túc, không gì cản nổi!\n“Don’t watch the clock; do what it does. Keep going.” – Sam Levenson',
+
+        '💙 Cứ giữ lửa này, 5–10 năm nữa con sẽ cảm ơn chính mình của hôm nay!\n“The best investment you can make is in yourself.” – Warren Buffett',
+
+        '⚡ Con đang tiến bộ với tốc độ mà người khác phải ngước nhìn. Tự hào lắm!'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
+
+// 3. CHẬM NHIỀU (totalTime > targetTime * 1.5)
+} else if (currentSession.totalTime > currentSession.targetTime * 1.5) {
+    const messages = [
+        '⏰ Hôm nay con hơi chậm hơn một chút, không sao cả con trai/con gái ơi!\n“Thời gian quý hơn tiền bạc. Con có thể kiếm thêm tiền, nhưng không thể kiếm thêm thời gian.” – Jim Rohn\nLần sau mình cùng tập trung hơn nhé, bố mẹ tin con làm được!',
+
+        '⚡ Con ơi, ai mà chẳng có ngày hơi “lag” một chút. Quan trọng là con đã không bỏ cuộc!\n“Tôi không thua, tôi chỉ tìm ra 10.000 cách không hoạt động thôi.” – Thomas Edison',
+
+        '❤️ Không sao đâu con yêu, ngày mai là một ngày hoàn toàn mới!\n“Chỉ những người dám thất bại lớn mới có thể đạt được thành công lớn.” – Robert F. Kennedy',
+
+        '🌱 Cây muốn cao phải chịu mưa gió. Hôm nay chậm một chút, mai con sẽ nhanh gấp đôi!\n“It’s not how fast you go, it’s that you don’t stop.” – Khổng Tử',
+
+        '💡 Có thể hôm nay con chưa tập trung tối đa, nhưng bố mẹ biết con có thể làm chủ thời gian mà!\n“The best way to predict the future is to create it.” – Peter Drucker',
+
+        '🐢 Nhớ câu chuyện rùa và thỏ không con? Rùa thắng vì kiên trì. Con vẫn đang về đích, thế là thắng rồi!\n“Slow and steady wins the race.”',
+
+        '🫂 Bố mẹ ở đây không phải để trách, mà để cùng con mạnh mẽ hơn mỗi ngày. Mai mình “phục thù” nhé con!'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
+
+// 4. CÒN LẠI (dưới 90% hoặc hơi chậm)
+} else {
+    const messages = [
+        '👍 Cố lên con yêu! Mỗi ngày con ngồi vào bàn học là con đã thắng sự lười biếng rồi!\n“The man who moves a mountain begins by carrying away small stones.” – Khổng Tử',
+
+        '🌱 Con đang gieo những hạt giống thành công. Có khi hôm nay chưa nảy mầm, nhưng cây đang lớn lên từng ngày!\n“It does not matter how slowly you go as long as you do not stop.” – Khổng Tử',
+
+        '💙 Bố mẹ tự hào vì con đã không bỏ cuộc. Đó là phẩm chất của mọi người vĩ đại!\n“You don’t have to be great to start, but you have to start to be great.” – Zig Ziglar',
+
+        '🔥 Mỗi lần con cố gắng là con đang rèn một thanh kiếm sắc bén hơn cho tương lai!\n“Every master was once a disaster.” – David Goggins',
+
+        '🌟 Hôm nay chưa phải ngày đẹp nhất của con, nhưng chắc chắn là nền móng cho những ngày đẹp nhất sắp tới!\n“The expert in anything was once a beginner.” – Helen Hayes',
+
+        '❤️ Con chỉ cần tốt hơn chính mình ngày hôm qua là bố mẹ đã hạnh phúc lắm rồi!\n“Be better than the you from yesterday.”',
+
+        '💪 Con ơi, những người thành công nhất thế giới cũng từng có ngày như thế này. Điều khác biệt là họ không bao giờ dừng lại. Con cũng thế!'
+    ];
+    feedback = messages[Math.floor(Math.random() * messages.length)];
 }
+let encouragement = feedback;
         
-        currentSession.reward = reward;
-        
-        let encouragement = '';
-        if (completed === totalQuestions && totalTime <= targetTime) {
-            encouragement = '🌟 Xuất sắc! Con đã làm bài rất tốt!';
-        } else if (completed >= totalQuestions * 0.8) {
-            encouragement = '💪 Tốt lắm! Con đang tiến bộ!';
-        } else {
-            encouragement = '🎯 Con cố gắng nhé! Lần sau sẽ tốt hơn!';
-        }
-        
-        let slowWarning = '';
-        if (currentSession.mode !== 'exam' && avgTime > 3) {
-            slowWarning = `<div class="encouragement" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
-                ⚠️ Con làm trung bình mỗi câu mất ${avgTime} phút. 
-                ${currentSession.callParentLogs.length === 0 ? 'Con đã thử dùng Chat AI chưa nhỉ?' : ''}
-                Hãy tập trung hơn và sử dụng công cụ hỗ trợ khi cần nhé!
-            </div>`;
-        }
+          let slowWarning = '';
+    // ✅ Kiểm tra avgTime hợp lệ trước khi so sánh
+    if (currentSession.mode !== 'exam' && completed > 0 && avgTime > 3) {
+        slowWarning = `<div class="encouragement" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+            ⚠️ Con làm trung bình mỗi câu mất ${avgTime} phút. 
+            ${currentSession.callParentLogs && currentSession.callParentLogs.length === 0 ? 'Con đã thử dùng Chat AI chưa nhỉ?' : ''}
+            Hãy tập trung hơn và sử dụng công cụ hỗ trợ khi cần nhé!
+        </div>`;
+    }
         
         content.innerHTML = `
             <div class="stats-summary">
@@ -1774,25 +1967,53 @@ if (currentSession.mode === 'exam') {
         }
     }
 
-    function skipSubmit() {
-        completedSubjects.push(currentSession.index);
-        saveProgress();
-        closeModal('resultModal');
-        loadSchedule();
-        
-        saveSessionData();
-        
-        const breakTime = currentSession.mode === 'exam' ? 10 : 5;
-        showBreakModal(breakTime);
+   function skipSubmit() {
+    // ✅ Lưu index trước
+    const completedIndex = currentSession ? currentSession.index : null;
+    
+    if (completedIndex !== null) {
+        completedSubjects.push(completedIndex);
     }
+    
+    saveProgress();
+    closeModal('resultModal');
+    
+    // ✅ LƯU SESSION DATA TRƯỚC KHI RESET
+    if (currentSession) {
+        saveSessionData();
+    }
+    
+    // ✅ RESET SAU KHI ĐÃ LƯU XONG
+    currentSession = null;
+    
+    loadSchedule();
+    
+    const breakTime = 5;
+    showBreakModal(breakTime);
+}
 
     function closeResultModal() {
-        closeModal('resultModal');
-        completedSubjects.push(currentSession.index);
-        saveProgress();
-        loadSchedule();
-        showBreakModal();
+    // ✅ Lưu index trước
+    const completedIndex = currentSession ? currentSession.index : null;
+    
+    if (completedIndex !== null && !completedSubjects.includes(completedIndex)) {
+        completedSubjects.push(completedIndex);
     }
+    
+    saveProgress();
+    closeModal('resultModal');
+    
+    // ✅ Lưu session TRƯỚC KHI reset
+    if (currentSession) {
+        saveSessionData();
+    }
+    
+    // ✅ Reset SAU KHI lưu
+    currentSession = null;
+    
+    loadSchedule();
+    showBreakModal();
+}
 
     function showBreakModal(breakMinutes = 5) {
         const modal = document.getElementById('breakModal');
@@ -1846,24 +2067,23 @@ function skipBreak() {
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     modal.classList.remove('active');
-    modal.style.display = 'none';
     
-    // ✅ THÊM ĐOẠN NÀY: Reset currentSession khi đóng modal setup/work
-    if (modalId === 'setupModal' || modalId === 'workModal') {
-        // Clear timer nếu có
+    // ✅ CHỈ clear timer, KHÔNG BAO GIỜ reset currentSession ở đây
+    if (modalId === 'workModal') {
         if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
         }
-        
-        // Reset session
-        if (currentSession && !completedSubjects.includes(currentSession.index)) {
-            // Chỉ reset nếu chưa hoàn thành
+        // KHÔNG reset currentSession vì finishWork() và showResultModal() cần dùng
+    }
+    
+    // Khi đóng setupModal bằng nút X, reset currentSession
+    if (modalId === 'setupModal') {
+        if (currentSession && currentSession.type === 'homework' && !currentSession.startTime) {
+            // Chỉ reset nếu chưa bắt đầu làm bài
             currentSession = null;
+            loadSchedule();
         }
-        
-        // Reload lại schedule để bỏ trạng thái "in-progress"
-        loadSchedule();
     }
 }
 
@@ -2001,25 +2221,26 @@ if (currentSession.completionRate >= 100 && currentSession.totalTime <= currentS
 }
 
     const sessionData = {
-        id: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        date: new Date().toISOString(),
-        subject: currentSession.subject.subject,
-        mode: currentSession.mode,
-        time: currentSession.totalTime,
-        targetTime: currentSession.targetTime,
-        completionRate: currentSession.completionRate,
-        reward: currentSession.reward,
-        questions: questionsList,
-        aiChatCount: aiChatCount,
-        callParentCount: currentSession.callParentLogs ? currentSession.callParentLogs.length : 0,
-        callParentLogs: currentSession.callParentLogs || [],
-        feedback: feedback,
-        score: currentSession.submittedFiles ? undefined : undefined,
-        total: totalQuestions,
-        paid: false,
-        paidDate: null,
-        submittedFiles: currentSession.submittedFiles || null
-    };
+    id: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+    date: new Date().toISOString(),
+    subject: currentSession.subject.subject,
+    mode: currentSession.mode,
+    time: currentSession.totalTime,
+    targetTime: currentSession.targetTime,
+    completionRate: currentSession.completionRate,
+    reward: currentSession.reward,
+    questions: questionsList,
+    aiChatCount: aiChatCount,
+    callParentCount: currentSession.callParentLogs ? currentSession.callParentLogs.length : 0,
+    callParentLogs: currentSession.callParentLogs || [],
+    feedback: feedback,
+    // ✅ CHỈ THÊM score khi có giá trị
+    ...(currentSession.score !== undefined && { score: currentSession.score }),
+    total: totalQuestions,
+    paid: false,
+    paidDate: null,
+    submittedFiles: currentSession.submittedFiles || null
+};
     
     let history = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
 sessionData.id = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
