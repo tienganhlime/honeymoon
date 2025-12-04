@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Bố Mẹ 📊</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+
     <style>
         * {
             margin: 0;
@@ -436,6 +440,7 @@
                 <button class="tab-btn" onclick="switchTab('stats')">Thống kê</button>
                 <button class="tab-btn" onclick="switchTab('schedule')">Thời khóa biểu</button>
                 <button class="tab-btn" onclick="switchTab('rewards')">Tiền thưởng</button>
+<button class="tab-btn" onclick="switchTab('settings')">⚙️ Cài đặt</button>
             </div>
         </div>
 
@@ -559,6 +564,35 @@
             </div>
         </div>
     </div>
+<!-- TAB 6: CÀI ĐẶT THƯỞNG -->
+<div id="tab-settings" class="tab-content">
+    <div class="card">
+        <h2>⚙️ Cài đặt tiền thưởng</h2>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 10px;">
+            <div class="input-group">
+                <label>Làm đúng thời gian:</label>
+                <input type="number" id="rewardOnTime" value="2000"> đồng
+            </div>
+            <div class="input-group">
+                <label>Làm nhanh hơn 20%:</label>
+                <input type="number" id="rewardFast" value="1000"> đồng
+            </div>
+            <div class="input-group">
+                <label>Hoàn thành 100%:</label>
+                <input type="number" id="reward100" value="2000"> đồng
+            </div>
+            <div class="input-group">
+                <label>Hoàn thành 90%+:</label>
+                <input type="number" id="reward90" value="1000"> đồng
+            </div>
+            <div class="input-group">
+                <label>Chế độ luyện thi (bonus):</label>
+                <input type="number" id="rewardExam" value="1000"> đồng
+            </div>
+            <button class="btn btn-success" onclick="saveRewardSettings()">💾 Lưu cài đặt</button>
+        </div>
+    </div>
+</div>
 
     <!-- Modal chi tiết session -->
     <div class="modal" id="sessionModal">
@@ -635,23 +669,54 @@
             ]
         };
 
-        window.onload = function() {
-            loadData();
-            displayCurrentDate();
-            updateOverview();
-            displayRecentActivities();
-            displayAlerts();
-            renderSessions();
-            renderStats();
-            renderSchedule();
-            renderRewards();
-        };
+const firebaseConfig = {
+  apiKey: "AIzaSyBv5qOVgNajnOKoz-vaIYENSWZY2jB8N30",
+  authDomain: "honey-4d9b1.firebaseapp.com",
+  projectId: "honey-4d9b1",
+  storageBucket: "honey-4d9b1.firebasestorage.app",
+  messagingSenderId: "108470975596",
+  appId: "1:108470975596:web:c3223c55e7afbd9276ac49"
+};
 
-        function loadData() {
-            sessionHistory = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
-            activityLogs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
-            completedSubjects = JSON.parse(localStorage.getItem('completedSubjects') || '[]');
-        }
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+        window.onload = async function() {
+    await loadData(); // Đợi load xong
+    displayCurrentDate();
+    updateOverview();
+    displayRecentActivities();
+    displayAlerts();
+    renderSessions();
+    renderStats();
+    renderSchedule();
+    renderRewards();
+};
+
+        async function loadData() {
+    try {
+        // Đọc sessionHistory từ Firebase
+        const sessionsSnapshot = await db.collection('sessions').orderBy('date', 'desc').get();
+        sessionHistory = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Đọc activityLogs
+        const logsSnapshot = await db.collection('activityLogs').orderBy('timestamp', 'desc').limit(100).get();
+        activityLogs = logsSnapshot.docs.map(doc => doc.data());
+        
+        // Đọc completedSubjects (hôm nay)
+        const today = new Date().toDateString();
+        const progressDoc = await db.collection('dailyProgress').doc(today).get();
+        completedSubjects = progressDoc.exists ? progressDoc.data().completed || [] : [];
+        
+    } catch (error) {
+        console.error('Load data error:', error);
+        // Fallback về localStorage nếu lỗi
+        sessionHistory = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
+        activityLogs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+        completedSubjects = JSON.parse(localStorage.getItem('completedSubjects') || '[]');
+    }
+}
+
 
         function displayCurrentDate() {
             const today = new Date();
@@ -1081,8 +1146,38 @@
         }
 
         function editScheduleItem(day, index) {
-            alert('Tính năng chỉnh sửa sẽ được cập nhật trong phiên bản tiếp theo!');
-        }
+    const item = SCHEDULE[day][index];
+    
+    const newTime = prompt('Thời gian:', item.time);
+    if (!newTime) return;
+    
+    const newSubject = prompt('Môn học:', item.subject);
+    if (!newSubject) return;
+    
+    const newType = prompt('Loại (homework/class/break):', item.type);
+    if (!newType) return;
+    
+    // Cập nhật
+    SCHEDULE[day][index] = {
+        ...item,
+        time: newTime,
+        subject: newSubject,
+        type: newType
+    };
+    
+    // Lưu lên Firebase
+    saveScheduleToFirebase();
+    renderSchedule();
+    alert('Đã cập nhật!');
+}
+
+async function saveScheduleToFirebase() {
+    try {
+        await db.collection('settings').doc('schedule').set({ schedule: SCHEDULE });
+    } catch (error) {
+        console.error('Save schedule error:', error);
+    }
+}
 
         function deleteScheduleItem(day, index) {
             if (confirm('Bạn có chắc muốn xóa môn học này?')) {
@@ -1142,16 +1237,27 @@
             }).join('');
         }
 
-        function markAsPaid(sessionId) {
-            const session = sessionHistory.find(s => s.id === sessionId);
-            if (session) {
-                session.paid = true;
-                session.paidDate = new Date().toISOString();
-                localStorage.setItem('sessionHistory', JSON.stringify(sessionHistory));
-                renderRewards();
-                alert('Đã đánh dấu đã trả thưởng!');
-            }
+        async function markAsPaid(sessionId) {
+    try {
+        await db.collection('sessions').doc(sessionId).update({
+            paid: true,
+            paidDate: new Date().toISOString()
+        });
+        
+        // Cập nhật local state
+        const session = sessionHistory.find(s => s.id === sessionId);
+        if (session) {
+            session.paid = true;
+            session.paidDate = new Date().toISOString();
         }
+        
+        renderRewards();
+        alert('Đã đánh dấu đã trả thưởng!');
+    } catch (error) {
+        console.error('Mark paid error:', error);
+        alert('Lỗi: ' + error.message);
+    }
+}
 
         // Close modal when clicking outside
         document.getElementById('sessionModal').addEventListener('click', function(e) {
@@ -1159,6 +1265,24 @@
                 closeModal();
             }
         });
+
+async function saveRewardSettings() {
+    const settings = {
+        onTime: parseInt(document.getElementById('rewardOnTime').value),
+        fast: parseInt(document.getElementById('rewardFast').value),
+        complete100: parseInt(document.getElementById('reward100').value),
+        complete90: parseInt(document.getElementById('reward90').value),
+        examBonus: parseInt(document.getElementById('rewardExam').value)
+    };
+    
+    try {
+        await db.collection('settings').doc('rewards').set(settings);
+        alert('✅ Đã lưu cài đặt thưởng!');
+    } catch (error) {
+        console.error('Save error:', error);
+        alert('Lỗi: ' + error.message);
+    }
+}
     </script>
 </body>
 </html>
