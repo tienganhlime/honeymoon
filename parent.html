@@ -634,6 +634,10 @@
                 <label>Chế độ luyện thi (bonus):</label>
                 <input type="number" id="rewardExam" value="1000"> đồng
             </div>
+<div class="input-group">
+    <label>Làm trước bài ngày mai (bonus):</label>
+    <input type="number" id="rewardAdvance" value="20000"> đồng
+</div>
             <button class="btn btn-success" onclick="saveRewardSettings()">💾 Lưu cài đặt</button>
         </div>
     </div>
@@ -1324,11 +1328,18 @@ const rewardSessions = sessionHistory.filter(s => s.reward !== undefined && s.re
     container.innerHTML = rewardSessions.map(session => {
         const date = new Date(session.date).toLocaleDateString('vi-VN');
         const time = new Date(session.date).toLocaleTimeString('vi-VN');
+        
+        // ✅ THÊM 3 DÒNG NÀY
+        const advanceBadge = session.isAdvance 
+            ? '<span style="background:#ff9800; color:white; padding:3px 10px; border-radius:5px; font-size:0.9em; margin-left:10px;">⭐ Làm trước</span>' 
+            : '';
+        
         return `
             <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
     <div>
-        <strong>${session.subject}</strong>
+        <strong>${session.subject}</strong>${advanceBadge}  <!-- ✅ THÊM ${advanceBadge} VÀO ĐÂY -->
+
         ${session.reward < 0 ? ' <span style="color:#f44336; font-weight:bold; font-size:1.1em;">← PHẠT</span>' : ''}<br>
         <small style="color: #666;">${date} ${time}</small>
         ${session.feedback ? `<br><small style="color: #888; font-style: italic;">"${session.feedback.substring(0, 100)}..."</small>` : ''}
@@ -1386,9 +1397,9 @@ async function saveRewardSettings() {
         fast: parseInt(document.getElementById('rewardFast').value),
         complete100: parseInt(document.getElementById('reward100').value),
         complete90: parseInt(document.getElementById('reward90').value),
-        examBonus: parseInt(document.getElementById('rewardExam').value)
-    };
-    
+        examBonus: parseInt(document.getElementById('rewardExam').value),
+        advanceBonus: parseInt(document.getElementById('rewardAdvance').value)  // ✅ THÊM
+    };    
     try {
         await db.collection('settings').doc('rewards').set(settings);
         alert('✅ Đã lưu cài đặt thưởng!');
@@ -1412,8 +1423,8 @@ async function loadRewardSettingsToForm() {
             document.getElementById('reward100').value = settings.complete100 || 2000;
             document.getElementById('reward90').value = settings.complete90 || 1000;
             document.getElementById('rewardExam').value = settings.examBonus || 1000;
-        }
-    } catch (error) {
+            document.getElementById('rewardAdvance').value = settings.advanceBonus || 5000;  // ✅ THÊM
+        }    } catch (error) {
         console.error('Load settings error:', error);
     }
 }

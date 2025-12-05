@@ -605,16 +605,22 @@
         </div>
         
         <div class="nav-tabs">
-            <button class="tab-btn active" onclick="showTab('schedule', this)">
-                Lịch học hôm nay
-            </button>
-            <button class="tab-btn" onclick="showTab('stats', this)">
-                Tiền thưởng của con
-            </button>
-            <button class="tab-btn" onclick="showTab('messages', this)">
-                Tin nhắn bố mẹ
-            </button>
-        </div>
+    <button class="tab-btn active" onclick="showTab('schedule', this)">
+        Lịch học hôm nay
+    </button>
+    <button class="tab-btn" onclick="showTab('upcoming', this)">
+        📅 5 ngày tới
+    </button>
+    <button class="tab-btn" onclick="showTab('history', this)">
+        📖 Lịch sử ngày hôm qua
+    </button>
+    <button class="tab-btn" onclick="showTab('stats', this)">
+        Tiền thưởng của con
+    </button>
+    <button class="tab-btn" onclick="showTab('messages', this)">
+        Tin nhắn bố mẹ
+    </button>
+</div>
         
         <div class="alert-banner" id="alertBanner">
             <span style="font-size: 2em;">⚠️</span>
@@ -622,6 +628,28 @@
         </div>
 
         <div id="scheduleContainer" class="schedule-grid"></div>
+        <!-- TAB 5 NGÀY TỚI -->
+<div id="tab-upcoming" class="tab-content">
+    <div class="card" style="margin: 25px 15px;">
+        <h2 style="color: #667eea; text-align: center; font-size: 1.8em; margin-bottom: 20px;">
+            📅 Lịch học 5 ngày tới
+        </h2>
+        <p style="text-align: center; color: #ff9800; font-size: 1.1em; margin-bottom: 20px;">
+            ⭐ Làm trước bài ngày mai → Thưởng thêm 20,000đ!
+        </p>
+        <div id="upcomingScheduleContainer"></div>
+    </div>
+</div>
+
+<!-- TAB LỊCH SỬ NGÀY HÔM QUA -->
+<div id="tab-history" class="tab-content">
+    <div class="card" style="margin: 25px 15px;">
+        <h2 style="color: #667eea; text-align: center; font-size: 1.8em; margin-bottom: 20px;">
+            📖 Lịch sử ngày hôm qua
+        </h2>
+        <div id="yesterdayHistoryContainer"></div>
+    </div>
+</div>
         
         <!-- TAB TIỀN THƯỞNG -->
         <div id="tab-stats" class="tab-content">
@@ -770,11 +798,12 @@
 let SCHEDULE = {};
 let ACTIVITIES = [];
 let REWARD_SETTINGS = {
-    onTime: 10000,
-    fast: 15000,
-    complete100: 20000,
-    complete90: 10000,
-    examBonus: 25000
+    onTime: 1000,
+    fast: 1500,
+    complete100: 2000,
+    complete90: 1000,
+    examBonus: 2500,
+advanceBonus: 5000
 };
 
 const FORM_TEMPLATES = {
@@ -946,6 +975,7 @@ Hãy kiên nhẫn với em nhé!`
     let workStartTime = null;
     let completedSubjects = [];
     let breakWarningTimeout = null;
+let todayCompleted = false;
 
     // Initialize
 window.onload = async function() {
@@ -956,6 +986,32 @@ window.onload = async function() {
     await loadSchedule(); // ✅ THÊM await
     loadProgress();
 };
+
+function showTab(tabName, buttonElement) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    const tabContent = document.getElementById('tab-' + tabName);
+    if (tabContent) {
+        tabContent.style.display = 'block';
+    }
+    
+    if (buttonElement) {
+        buttonElement.classList.add('active');
+    }
+    
+    // Load data khi chuyển tab
+    if (tabName === 'schedule') {
+        document.getElementById('scheduleContainer').style.display = 'grid';
+    } else {
+        document.getElementById('scheduleContainer').style.display = 'none';
+    }
+    
+    if (tabName === 'stats') loadKidStats();
+    if (tabName === 'messages') loadMessages();
+if (tabName === 'upcoming') loadUpcomingSchedule();  // ✅ Thêm
+if (tabName === 'history') loadYesterdayHistory();
+}
 
     function displayDate() {
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1000,7 +1056,7 @@ window.onload = async function() {
         // ✅ Cập nhật completedSubjects
         completedSubjects = Array.from(completedToday);
         localStorage.setItem('completedSubjects', JSON.stringify(completedSubjects));
-        
+        todayCompleted = completedSubjects.length === todaySchedule.filter(s => s.type === 'homework').length;
         console.log('✅ Completed subjects today:', completedSubjects);
         
     } catch (error) {
@@ -1116,7 +1172,7 @@ window.onload = async function() {
             <div class="input-group">
                 <label>Chọn dạng bài:</label>
                 <select id="formTemplate" onchange="updateFormTemplate()">
-                    <option value="">Tự nhập số câu</option>
+                    <option value="">Tự nhập số phiếu/ sách</option>
         `;
         
         for (let template in FORM_TEMPLATES) {
@@ -1133,7 +1189,7 @@ window.onload = async function() {
             <div class="input-group" id="customInputs">
                 <label>Số phần (parts):</label>
                 <input type="number" id="numParts" value="1" min="1">
-                <label style="margin-top: 10px;">Số câu mỗi phần (cách nhau bởi dấu phẩy):</label>
+                <label style="margin-top: 10px;">Số phiếu, sách (mỗi tờ phiếu, quyển sách tính là 1, riêng toán cô Hải tính theo câu:</label>
                 <input type="text" id="numQuestions" placeholder="VD: 10,15,20" value="10">
             </div>
             <div class="input-group">
@@ -1549,7 +1605,11 @@ window.onload = async function() {
         reward += REWARD_SETTINGS.examBonus;
         rewardReason.push(`Chế độ luyện thi (bonus): +${REWARD_SETTINGS.examBonus.toLocaleString('vi-VN')}đ`);
     }
-        
+    // ✅ THƯỞNG LÀM TRƯỚC
+if (currentSession.isAdvance) {
+    reward += REWARD_SETTINGS.advanceBonus;
+    rewardReason.push(`⭐ Làm trước bài ngày mai: +${REWARD_SETTINGS.advanceBonus.toLocaleString('vi-VN')}đ`);
+}
     currentSession.reward = reward;
         
         let feedback = '';
@@ -2222,7 +2282,7 @@ if (currentSession.completionRate >= 100 && currentSession.totalTime <= currentS
 
     const sessionData = {
     id: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-    date: new Date().toISOString(),
+    date: currentSession.isAdvance ? currentSession.advanceDate + 'T' + new Date().toISOString().split('T')[1] : new Date().toISOString(),
     subject: currentSession.subject.subject,
     mode: currentSession.mode,
     time: currentSession.totalTime,
@@ -2234,6 +2294,8 @@ if (currentSession.completionRate >= 100 && currentSession.totalTime <= currentS
     callParentCount: currentSession.callParentLogs ? currentSession.callParentLogs.length : 0,
     callParentLogs: currentSession.callParentLogs || [],
     feedback: feedback,
+isAdvance: currentSession.isAdvance || false,  // ✅ THÊM FLAG
+advanceDate: currentSession.advanceDate || null, 
     // ✅ CHỈ THÊM score khi có giá trị
     ...(currentSession.score !== undefined && { score: currentSession.score }),
     total: totalQuestions,
@@ -2276,29 +2338,6 @@ const db = firebase.firestore();
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQgklJRPBeMHRX6x0gyBjEgx_UAMqWLD-OPu39c0pLbVkr7XeFa5RdfyrzH6mhtcXKYg/exec';
 
-function showTab(tabName, buttonElement) {
-    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    
-    const tabContent = document.getElementById('tab-' + tabName);
-    if (tabContent) {
-        tabContent.style.display = 'block';
-    }
-    
-    if (buttonElement) {
-        buttonElement.classList.add('active');
-    }
-    
-    // Load data khi chuyển tab
-    if (tabName === 'schedule') {
-        document.getElementById('scheduleContainer').style.display = 'grid';
-    } else {
-        document.getElementById('scheduleContainer').style.display = 'none';
-    }
-    
-    if (tabName === 'stats') loadKidStats();
-    if (tabName === 'messages') loadMessages();
-}
 
 function logActivity(type, detail) {
     const log = {
@@ -2342,16 +2381,23 @@ async function loadKidStats() {
             if (new Date(s.date).toDateString() === today) todayReward += reward;
             if (new Date(s.date) >= weekAgo) weekReward += reward;
 
-            if (reward > 0) {
-                const date = new Date(s.date).toLocaleDateString('vi-VN');
-                historyHTML.push(`
-                    <div style="background: white; padding: 18px; border-radius: 18px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 6px solid #667eea;">
-                        <div style="font-weight: bold; font-size: 1.3em; color: #333;">${s.subject} • ${date}</div>
-                        <div style="margin-top: 8px; font-size: 1.4em; color: #4caf50; font-weight: bold;">+${reward.toLocaleString()}đ</div>
-                        ${s.feedback ? `<div style="margin-top: 8px; color: #666; font-style: italic;">"${s.feedback}"</div>` : ''}
-                    </div>
-                `);
-            }
+           if (reward !== 0) {  // ✅ HIỂN THỊ CẢ DƯƠNG VÀ ÂM
+    const date = new Date(s.date).toLocaleDateString('vi-VN');
+    const time = new Date(s.date).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+    
+    // ✅ Màu sắc khác nhau cho thưởng/phạt
+    const borderColor = reward > 0 ? '#667eea' : '#f44336';
+    const textColor = reward > 0 ? '#4caf50' : '#f44336';
+    const prefix = reward > 0 ? '+' : '';
+    
+    historyHTML.push(`
+        <div style="background: white; padding: 18px; border-radius: 18px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 6px solid ${borderColor};">
+            <div style="font-weight: bold; font-size: 1.3em; color: #333;">${s.subject} • ${date} ${time}</div>
+            <div style="margin-top: 8px; font-size: 1.4em; color: ${textColor}; font-weight: bold;">${prefix}${reward.toLocaleString()}đ</div>
+            ${s.feedback ? `<div style="margin-top: 8px; color: #666; font-style: italic;">"${s.feedback.substring(0, 100)}..."</div>` : ''}
+        </div>
+    `);
+}
         });
 
         document.getElementById('kidTodayReward').textContent = todayReward.toLocaleString() + 'đ';
@@ -2410,7 +2456,153 @@ async function sendMessage() {
     document.getElementById('messageToParent').value = '';
     loadMessages();
 }
+// ✅ HÀM MỚI: LOAD LỊCH 5 NGÀY TỚI
+async function loadUpcomingSchedule() {
+    const container = document.getElementById('upcomingScheduleContainer');
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const daysVi = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+    
+    let html = '';
+    
+    for (let i = 1; i <= 5; i++) {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + i);
+        const dayName = days[targetDate.getDay()];
+        const dayNameVi = daysVi[targetDate.getDay()];
+        const dateStr = targetDate.toLocaleDateString('vi-VN');
+        const dateKey = targetDate.toISOString().split('T')[0];
+        
+        const schedule = SCHEDULE[dayName] || [];
+        
+        let completed = false;
+        try {
+            const snap = await db.collection('sessions')
+                .where('date', '>=', dateKey + 'T00:00:00.000Z')
+                .where('date', '<=', dateKey + 'T23:59:59.999Z')
+                .get();
+            completed = !snap.empty;
+        } catch (e) {}
+        
+        html += `
+            <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <div style="font-size: 1.3em; font-weight: bold; color: #667eea; margin-bottom: 10px;">
+                    ${dayNameVi}, ${dateStr}
+                    ${completed ? '<span style="color: #4caf50; margin-left: 10px;">✓ Đã hoàn thành</span>' : ''}
+                </div>
+                <div class="schedule-grid">
+        `;
+        
+        schedule.forEach((item, idx) => {
+            const canDo = i === 1 && todayCompleted && !completed;
+            const disabledClass = canDo ? '' : 'style="opacity: 0.5; cursor: not-allowed;"';
+            
+            html += `
+                <div class="subject-card ${item.type === 'class' ? 'class-type' : ''}" 
+                     ${disabledClass}
+                     onclick="${canDo ? `handleAdvanceWork('${dayName}', ${idx}, '${dateKey}')` : 'alert(\"Hoàn thành hôm nay trước nhé! 💪\")'}"
+                >
+                    <div class="time-badge">${item.time}</div>
+                    <div class="subject-name">${item.subject}</div>
+                    <div class="subject-type">
+                        ${item.type === 'homework' ? '📝 Bài tập về nhà' : 
+                          item.type === 'class' ? '🏫 Học tại lớp' : '☕ Nghỉ ngơi'}
+                    </div>
+                    ${canDo ? '<div style="color: #ff9800; font-size: 0.9em; margin-top: 5px;">⭐ Làm trước +20k!</div>' : ''}
+                </div>
+            `;
+        });
+        
+        html += `</div></div>`;
+    }
+    
+    container.innerHTML = html;
+}
 
+// ✅ HÀM XỬ LÝ LÀM TRƯỚC
+async function handleAdvanceWork(dayName, index, dateKey) {
+    if (!confirm('Làm trước bài ngày mai để nhận thưởng 20,000đ?')) return;
+    
+    const schedule = SCHEDULE[dayName];
+    const subject = schedule[index];
+    
+    currentSession = {
+        index: index,
+        subject: subject,
+        type: 'homework',
+        isAdvance: true,
+        advanceDate: dateKey
+    };
+    
+    showSetupModal(subject, index);
+}
+
+// ✅ HÀM LOAD LỊCH SỬ NGÀY HÔM QUA
+async function loadYesterdayHistory() {
+    const container = document.getElementById('yesterdayHistoryContainer');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toISOString().split('T')[0];
+    
+    try {
+        const snap = await db.collection('sessions')
+            .where('date', '>=', yesterdayKey + 'T00:00:00.000Z')
+            .where('date', '<=', yesterdayKey + 'T23:59:59.999Z')
+            .orderBy('date', 'desc')
+            .get();
+        
+        if (snap.empty) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Không có dữ liệu ngày hôm qua</p>';
+            return;
+        }
+        
+        let html = '';
+        snap.forEach(doc => {
+            const s = doc.data();
+            const time = new Date(s.date).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+            const minutes = Math.floor(s.time / 60);
+            const seconds = s.time % 60;
+            
+            html += `
+                <div style="background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="font-size: 1.3em; font-weight: bold; color: #333;">${s.subject}</div>
+                        <div style="color: #999;">${time}</div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+                        <div style="background: #f5f5f5; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #666;">Thời gian</div>
+                            <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">${minutes}:${String(seconds).padStart(2, '0')}</div>
+                        </div>
+                        <div style="background: #f5f5f5; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #666;">Hoàn thành</div>
+                            <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">${s.completionRate}%</div>
+                        </div>
+                        <div style="background: #f5f5f5; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #666;">Chế độ</div>
+                            <div style="font-size: 1.2em; font-weight: bold;">${s.mode === 'exam' ? '🎯 Thi' : '📝 Thường'}</div>
+                        </div>
+                        <div style="background: #e8f5e9; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #2e7d32;">Thưởng</div>
+                            <div style="font-size: 1.2em; font-weight: bold; color: #4caf50;">+${(s.reward || 0).toLocaleString()}đ</div>
+                        </div>
+                    </div>
+                    
+                    ${s.feedback ? `
+                    <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 15px; border-radius: 10px; font-style: italic; color: #333;">
+                        "${s.feedback.substring(0, 150)}..."
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<p style="text-align: center; color: #f44336;">Lỗi khi tải dữ liệu</p>';
+    }
+}
 </script>
 </body>
 </html>
